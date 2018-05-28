@@ -1,6 +1,6 @@
 #include "counterChannelClass.h"
 
-CounterChannelClass::CounterChannelClass() : ChannelClass("P1")
+CounterChannelClass::CounterChannelClass() : ChannelClass("P2")
 {
   CNTrateSpinBox = new QSpinBox;
   CNTrateSpinBox->setEnabled(false);

@@ -3,17 +3,20 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
-  resize(1280,500);
+  resize(1280,800);
   createControlGroupBox();
-  createFreqScanGroupBox();
   createChannelGroupBox();
+  createFreqScanGroupBox();
+  createBleachGroupBox();
+  createTabWidget();
   createNoteGroupBox();
 
   windowLayout= new QVBoxLayout;
-  windowLayout->addWidget(controlGroupBox);
-  windowLayout->addWidget(freqScanGroupBox);
-  windowLayout->addWidget(channelGroupBox);
-  windowLayout->addWidget(noteGroupBox);
+  windowLayout->addWidget(controlGroupBox,0,0);
+//  windowLayout->addWidget(freqScanGroupBox,1,0);
+  windowLayout->addWidget(tabWidget,1,0);
+  windowLayout->addWidget(channelGroupBox,2,0);
+  windowLayout->addWidget(noteGroupBox,3,0);
 
   window = new QWidget();
   window->setLayout(windowLayout);
@@ -50,7 +53,7 @@ void MainWindow::createControlGroupBox()
   clockSpeedSpinBox->setKeyboardTracking(false);
 
   QLabel *repeatNumLabel = new QLabel(tr("Repeat Num"));
-  clockSpeedLabel->setAlignment(Qt::AlignCenter);
+  repeatNumLabel->setAlignment(Qt::AlignCenter);
 
   repeatNumSpinBox = new QSpinBox;
   repeatNumSpinBox->setRange(1,20);  // Repeat Num range
@@ -64,10 +67,11 @@ void MainWindow::createControlGroupBox()
   // repeatProgressLine->setEnabled(false);
   repeatProgressLine->setReadOnly(true);
 
-  freqScanControlComboBox = new QComboBox;
-  freqScanControlComboBox->addItem("Single");
-  freqScanControlComboBox->addItem("Frequency Scan");
-  freqScanControlComboBox->setEnabled(true);
+  measureControlComboBox = new QComboBox;
+  measureControlComboBox->addItem("Single");
+  measureControlComboBox->addItem("Frequency Scan");
+  measureControlComboBox->addItem("Bleaching");
+  measureControlComboBox->setEnabled(true);
 
   QLabel *writeDataLabel = new QLabel(tr("Write"));
   writeDataLabel->setAlignment(Qt::AlignCenter);
@@ -80,7 +84,7 @@ void MainWindow::createControlGroupBox()
   controlLayout->addWidget(repeatNumLabel,0,2);
   controlLayout->addWidget(repeatNumSpinBox,0,3);
   controlLayout->addWidget(repeatProgressLine,0,4);
-  controlLayout->addWidget(freqScanControlComboBox,0,5);
+  controlLayout->addWidget(measureControlComboBox,0,5);
   controlLayout->addWidget(writeDataLabel,0,6);
   controlLayout->addWidget(writeDataCheckBox,0,7);
   controlLayout->addWidget(startPushButton,0,8);
@@ -90,7 +94,7 @@ void MainWindow::createControlGroupBox()
   
   controlGroupBox->setLayout(controlLayout);
   connect(clockSpeedSpinBox,SIGNAL(valueChanged(int)),this,SLOT(updateReadRate()));
-  connect(freqScanControlComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(freqScanControlComboBoxChanged())) ;
+  connect(measureControlComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(measureControlComboBoxChanged())) ;
 
   timeout = timeLimit/1000000;
 
@@ -98,8 +102,30 @@ void MainWindow::createControlGroupBox()
   connect(stopPushButton, SIGNAL(clicked()),this,SLOT(stopButtonPressed()));
 }
 
+void MainWindow::createTabWidget() {
+  tabWidget = new QTabWidget;
+
+//  tabWidget->addTab(freqScanGroupBox, tr("Frequency Scan"));
+  tabWidget->addTab(freqScanWidget, tr("Frequency Scan"));
+  tabWidget->addTab(bleachWidget, tr("Bleaching"));
+  tabWidget->setFixedHeight(85);
+}
+
+
 void MainWindow::createFreqScanGroupBox() {
-  freqScanGroupBox = new QGroupBox(tr("Frequency Scan"));
+  freqScanWidget = new QWidget;
+
+  // set color to the background color
+  QPalette pal = palette();
+  pal.setColor(QPalette::Background, QWidget::palette().color(QWidget::backgroundRole()));
+  freqScanWidget->setAutoFillBackground(true);
+  freqScanWidget->setPalette(pal);
+
+  QLabel *freqScanTypeLabel = new QLabel(tr("Type"));
+  freqScanTypeComboBox = new QComboBox;
+  freqScanTypeComboBox->addItem("Cs");
+  freqScanTypeComboBox->addItem("DDS");
+  freqScanTypeComboBox->setEnabled(false);
 
   QLabel *freqScanMasterLabel = new QLabel(tr("Master"));
   freqScanMasterComboBox = new QComboBox;
@@ -113,6 +139,7 @@ void MainWindow::createFreqScanGroupBox() {
   freqScanTerminalComboBox = new QComboBox;
   freqScanTerminalComboBox->addItem("P0.0 (DDS1)");
   freqScanTerminalComboBox->addItem("P0.1 (DDS2)");
+  freqScanTerminalComboBox->addItem("P0.4 (Vescent)");
   freqScanTerminalComboBox->setEnabled(false);
 
   QLabel *freqScanTimeLabel = new QLabel(tr("Time"));
@@ -191,81 +218,254 @@ void MainWindow::createFreqScanGroupBox() {
   freqScanProgressLine->setEnabled(false);
   freqScanProgressLine->setReadOnly(true);
 
+  QLabel *freqScanDetectLabel = new QLabel(tr("Detect"));
+  freqScanDetectComboBox = new QComboBox;
+  freqScanDetectComboBox->addItem("P2.0");
+  freqScanDetectComboBox->addItem("AI0");
+  freqScanDetectComboBox->setEnabled(false);
+
   freqScanLayout= new QGridLayout;
-  freqScanLayout->addWidget(freqScanMasterLabel,0,0);
-  freqScanLayout->addWidget(freqScanMasterComboBox,1,0);
-  freqScanLayout->addWidget(freqScanTerminalLabel,0,1);
-  freqScanLayout->addWidget(freqScanTerminalComboBox,1,1);
-  freqScanLayout->addWidget(freqScanTimeLabel,0,2);
-  freqScanLayout->addWidget(freqScanTimeComboBox,1,2);
-  freqScanLayout->addWidget(freqScanSlaveLabel,0,3);
-  freqScanLayout->addWidget(freqScanSlaveComboBox,1,3);
-  freqScanLayout->addWidget(freqScanAOMLabel,0,4);
-  freqScanLayout->addWidget(freqScanAOMComboBox,1,4);
-  freqScanLayout->addWidget(freqScanDirectionLabel,0,5);
-  freqScanLayout->addWidget(freqScanDirectionComboBox,1,5);
-  freqScanLayout->addWidget(freqScanInitLabel,0,6);
-  freqScanLayout->addWidget(freqScanInitLine,1,6);
-  freqScanLayout->addWidget(freqScanStepLabel,0,7);
-  freqScanLayout->addWidget(freqScanStepLine,1,7);
-  freqScanLayout->addWidget(freqScanNumLabel,0,8);
-  freqScanLayout->addWidget(freqScanNumLine,1,8);
-  freqScanLayout->addWidget(freqScanPeriodLabel,0,9);
-  freqScanLayout->addWidget(freqScanPeriodLine,1,9);
-  freqScanLayout->addWidget(freqScanFinalLabel,0,10);
-  freqScanLayout->addWidget(freqScanFinalLine,1,10);
-  freqScanLayout->addWidget(freqScanProgressLabel,0,11);
-  freqScanLayout->addWidget(freqScanProgressLine,1,11);
+  freqScanLayout->addWidget(freqScanTypeLabel,0,0);
+  freqScanLayout->addWidget(freqScanTypeComboBox,1,0);
+  freqScanLayout->addWidget(freqScanMasterLabel,0,1);
+  freqScanLayout->addWidget(freqScanMasterComboBox,1,1);
+  freqScanLayout->addWidget(freqScanTerminalLabel,0,2);
+  freqScanLayout->addWidget(freqScanTerminalComboBox,1,2);
+  freqScanLayout->addWidget(freqScanTimeLabel,0,3);
+  freqScanLayout->addWidget(freqScanTimeComboBox,1,3);
+  freqScanLayout->addWidget(freqScanSlaveLabel,0,4);
+  freqScanLayout->addWidget(freqScanSlaveComboBox,1,4);
+  freqScanLayout->addWidget(freqScanAOMLabel,0,5);
+  freqScanLayout->addWidget(freqScanAOMComboBox,1,5);
+  freqScanLayout->addWidget(freqScanDirectionLabel,0,6);
+  freqScanLayout->addWidget(freqScanDirectionComboBox,1,6);
+  freqScanLayout->addWidget(freqScanInitLabel,0,7);
+  freqScanLayout->addWidget(freqScanInitLine,1,7);
+  freqScanLayout->addWidget(freqScanStepLabel,0,8);
+  freqScanLayout->addWidget(freqScanStepLine,1,8);
+  freqScanLayout->addWidget(freqScanNumLabel,0,9);
+  freqScanLayout->addWidget(freqScanNumLine,1,9);
+  freqScanLayout->addWidget(freqScanPeriodLabel,0,10);
+  freqScanLayout->addWidget(freqScanPeriodLine,1,10);
+  freqScanLayout->addWidget(freqScanFinalLabel,0,11);
+  freqScanLayout->addWidget(freqScanFinalLine,1,11);
+  freqScanLayout->addWidget(freqScanProgressLabel,0,12);
+  freqScanLayout->addWidget(freqScanProgressLine,1,12);
+  freqScanLayout->addWidget(freqScanDetectLabel,0,13);
+  freqScanLayout->addWidget(freqScanDetectComboBox,1,13);
 
-  freqScanGroupBox->setLayout(freqScanLayout);
+//  freqScanGroupBox->setLayout(freqScanLayout);
+  freqScanWidget->setLayout(freqScanLayout);
 
+  connect(freqScanTypeComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(freqScanTypeComboBoxChanged())) ;
   connect(freqScanInitLine,SIGNAL(editingFinished()),this,SLOT(getFreqScanFinal()));
   connect(freqScanStepLine,SIGNAL(editingFinished()),this,SLOT(getFreqScanFinal()));
   connect(freqScanNumLine,SIGNAL(editingFinished()),this,SLOT(getFreqScanFinal()));
 }
 
-void MainWindow::freqScanControlComboBoxChanged()
+void MainWindow::createBleachGroupBox() {
+    bleachWidget = new QWidget;
+    // set color to the background color
+    QPalette pal = palette();
+    pal.setColor(QPalette::Background, QWidget::palette().color(QWidget::backgroundRole()));
+    bleachWidget->setAutoFillBackground(true);
+    bleachWidget->setPalette(pal);
+
+    QLabel *bleachDirectionLabel = new QLabel(tr("Direction"));
+    bleachDirectionComboBox = new QComboBox;
+    bleachDirectionComboBox->addItem("time->repeat");
+    bleachDirectionComboBox->addItem("repeat->time");
+    bleachDirectionComboBox->setEnabled(false);
+
+    QLabel *bleachNumLabel = new QLabel(tr("Repeat Number"));
+    bleachNumSpinBox = new QSpinBox;
+    bleachNumSpinBox->setRange(1,100);  // Repeat Num range
+    bleachNumSpinBox->setSuffix(" ");
+    bleachNumSpinBox->setValue(1);   // Set the default repeat number 1
+    bleachNumSpinBox->setKeyboardTracking(false);
+
+    QLabel *bleachPeriodLabel = new QLabel(tr("Period [s]"));
+    bleachPeriodLabel->setAlignment(Qt::AlignRight);
+    bleachPeriodLine = new QLineEdit;
+    bleachPeriodLine->setAlignment(Qt::AlignRight);
+    bleachPeriodLine->setEnabled(false);
+
+    QLabel *bleachProbePOLabel = new QLabel(tr("Probe"));
+    QLabel *bleachCleanPOLabel = new QLabel(tr("Clean"));
+    QLabel *bleachPumpPOLabel1 = new QLabel(tr("Pump 1"));
+    QLabel *bleachPumpPOLabel2 = new QLabel(tr("Pump 2"));
+    bleachProbePOComboBox = new QComboBox;
+    bleachCleanPOComboBox = new QComboBox;
+    bleachPumpPOComboBox1 = new QComboBox;
+    bleachPumpPOComboBox2 = new QComboBox;
+    int m = 0;
+    for (m = DOBoxPortNum; m < DOBoxPortNum + pulseChannelNum; m++) {
+      bleachProbePOComboBox->addItem(pulseChannelObj[m]->channelTerminalLabel->text());
+      bleachCleanPOComboBox->addItem(pulseChannelObj[m]->channelTerminalLabel->text());
+      bleachPumpPOComboBox1->addItem(pulseChannelObj[m]->channelTerminalLabel->text());
+      bleachPumpPOComboBox2->addItem(pulseChannelObj[m]->channelTerminalLabel->text());
+    }
+    bleachProbePOComboBox->setEnabled(false);
+    bleachCleanPOComboBox->setEnabled(false);
+    bleachPumpPOComboBox1->setEnabled(false);
+    bleachPumpPOComboBox2->setEnabled(false);
+
+    QLabel *bleachProbeStartLabel = new QLabel(tr("Probe Start"));
+    QLabel *bleachCleanStartLabel = new QLabel(tr("Clean Start"));
+    QLabel *bleachPumpStartLabel = new QLabel(tr("Pump Start"));
+    bleachProbeStartComboBox = new QComboBox;
+    bleachCleanStartComboBox = new QComboBox;
+    bleachPumpStartComboBox = new QComboBox;
+    for (m = 0; m < pulseNum; m++) {
+      QString s = QString ("Time %1").arg(m);
+      bleachProbeStartComboBox->addItem(s);
+      bleachCleanStartComboBox->addItem(s);
+      bleachPumpStartComboBox->addItem(s);
+    }
+    bleachProbeStartComboBox->setEnabled(false);
+    bleachCleanStartComboBox->setEnabled(false);
+    bleachPumpStartComboBox->setEnabled(false);
+
+    QLabel *bleachTimeLabel = new QLabel(tr("Pump time list"));
+    bleachTimeLabel->setAlignment(Qt::AlignRight);
+    bleachTimeLine = new QLineEdit;
+    bleachTimeLine->setAlignment(Qt::AlignRight);
+    bleachTimeLine->setEnabled(false);
+
+    QLabel *bleachRepeatProgressLabel = new QLabel(tr("Repeat Progress"));
+    bleachRepeatProgressLabel->setAlignment(Qt::AlignRight);
+    bleachRepeatProgressLine = new QLineEdit;
+    bleachRepeatProgressLine->setAlignment(Qt::AlignRight);
+    bleachRepeatProgressLine->setEnabled(false);
+    bleachRepeatProgressLine->setReadOnly(true);
+
+    QLabel *bleachTimeProgressLabel = new QLabel(tr("Time Progress"));
+    bleachTimeProgressLabel->setAlignment(Qt::AlignRight);
+    bleachTimeProgressLine = new QLineEdit;
+    bleachTimeProgressLine->setAlignment(Qt::AlignRight);
+    bleachTimeProgressLine->setEnabled(false);
+    bleachTimeProgressLine->setReadOnly(true);
+
+    bleachLayout= new QGridLayout;
+    bleachLayout->addWidget(bleachDirectionLabel,0,0);
+    bleachLayout->addWidget(bleachDirectionComboBox,1,0);
+    bleachLayout->addWidget(bleachProbePOLabel,0,1);
+    bleachLayout->addWidget(bleachProbePOComboBox,1,1);
+    bleachLayout->addWidget(bleachProbeStartLabel,0,2);
+    bleachLayout->addWidget(bleachProbeStartComboBox,1,2);
+    bleachLayout->addWidget(bleachCleanPOLabel,0,3);
+    bleachLayout->addWidget(bleachCleanPOComboBox,1,3);
+    bleachLayout->addWidget(bleachCleanStartLabel,0,4);
+    bleachLayout->addWidget(bleachCleanStartComboBox,1,4);
+    bleachLayout->addWidget(bleachPumpPOLabel1,0,5);
+    bleachLayout->addWidget(bleachPumpPOComboBox1,1,5);
+    bleachLayout->addWidget(bleachPumpPOLabel2,0,6);
+    bleachLayout->addWidget(bleachPumpPOComboBox2,1,6);
+    bleachLayout->addWidget(bleachPumpStartLabel,0,7);
+    bleachLayout->addWidget(bleachPumpStartComboBox,1,7);
+    bleachLayout->addWidget(bleachNumLabel,0,8);
+    bleachLayout->addWidget(bleachNumSpinBox,1,8);
+    bleachLayout->addWidget(bleachPeriodLabel,0,9);
+    bleachLayout->addWidget(bleachPeriodLine,1,9);
+    bleachLayout->addWidget(bleachTimeLabel,0,10);
+    bleachLayout->addWidget(bleachTimeLine,1,10);
+    bleachLayout->addWidget(bleachRepeatProgressLabel,0,11);
+    bleachLayout->addWidget(bleachRepeatProgressLine,1,11);
+    bleachLayout->addWidget(bleachTimeProgressLabel,0,12);
+    bleachLayout->addWidget(bleachTimeProgressLine,1,12);
+    bleachLayout->setColumnStretch(10,2);
+
+    bleachWidget->setLayout(bleachLayout);
+
+    connect(freqScanInitLine,SIGNAL(editingFinished()),this,SLOT(getFreqScanFinal()));
+    connect(freqScanStepLine,SIGNAL(editingFinished()),this,SLOT(getFreqScanFinal()));
+    connect(freqScanNumLine,SIGNAL(editingFinished()),this,SLOT(getFreqScanFinal()));
+}
+
+void MainWindow::measureControlComboBoxChanged()
 {
-    if (freqScanControlComboBox->currentIndex() == 0) {
-        freqScanMasterComboBox->setEnabled(false);
-        freqScanTerminalComboBox->setEnabled(false);
-        freqScanTimeComboBox->setEnabled(false);
-        freqScanSlaveComboBox->setEnabled(false);
-        freqScanAOMComboBox->setEnabled(false);
-        freqScanDirectionComboBox->setEnabled(false);
-        freqScanInitLine->setEnabled(false);
-        freqScanStepLine->setEnabled(false);
-        freqScanNumLine->setEnabled(false);
-        freqScanPeriodLine->setEnabled(false);
-        freqScanFinalLine->setEnabled(false);
-        freqScanProgressLine->setEnabled(false);
-        plotDockObj[0]->plotInComboBox->removeItem(plotDockObj[0]->plotInComboBox->count()-1);
-        for (int i = 0; i < counterChannelNum; i++) {
-            counterChannelObj[i]->CNTrefTimeComboBox->setEnabled(false);
-            counterChannelObj[i]->CNTstartComboBox->setEnabled(false);
-            counterChannelObj[i]->CNTendComboBox->setEnabled(false);
-        }
+    if (measureControlComboBox->currentIndex() == 0) {  // Single
+       freqScanTabEnable(false);
+       bleachTabEnable(false);
     }
-    else if (freqScanControlComboBox->currentIndex() == 1){
-        freqScanMasterComboBox->setEnabled(true);
-        freqScanTerminalComboBox->setEnabled(true);
-        freqScanTimeComboBox->setEnabled(true);
-        freqScanSlaveComboBox->setEnabled(true);
-        freqScanAOMComboBox->setEnabled(true);
-        freqScanDirectionComboBox->setEnabled(true);
-        freqScanInitLine->setEnabled(true);
-        freqScanStepLine->setEnabled(true);
-        freqScanNumLine->setEnabled(true);
-        freqScanPeriodLine->setEnabled(true);
-        freqScanFinalLine->setEnabled(true);
-        freqScanProgressLine->setEnabled(true);
+    else if (measureControlComboBox->currentIndex() == 1){  // Frequency Scan
+       freqScanTabEnable(true);
+       bleachTabEnable(false);
+       tabWidget->setCurrentIndex(0);
+    }
+    else if (measureControlComboBox->currentIndex() == 2){  // Bleach
+       freqScanTabEnable(false);
+       bleachTabEnable(true);
+       tabWidget->setCurrentIndex(1);
+    }
+}
+
+void MainWindow::freqScanTabEnable(bool b){
+    freqScanTypeComboBox->setEnabled(b);
+    // freqScanMasterComboBox->setEnabled(b);
+    freqScanTerminalComboBox->setEnabled(b);
+    freqScanTimeComboBox->setEnabled(b);
+    // freqScanSlaveComboBox->setEnabled(b);
+    // freqScanAOMComboBox->setEnabled(b);
+    freqScanDirectionComboBox->setEnabled(b);
+    freqScanInitLine->setEnabled(b);
+    freqScanStepLine->setEnabled(b);
+    freqScanNumLine->setEnabled(b);
+    freqScanPeriodLine->setEnabled(b);
+    freqScanFinalLine->setEnabled(b);
+    freqScanProgressLine->setEnabled(b);
+    freqScanDetectComboBox->setEnabled(b);
+
+    // add in the plot list, currently works only for plotDockObj[0], needs to be updated
+    if (b == true) {
         plotDockObj[0]->plotInComboBox->addItem("Frequency Scan");
-        for (int i = 0; i < counterChannelNum; i++) {
-            counterChannelObj[i]->CNTrefTimeComboBox->setEnabled(true);
-            counterChannelObj[i]->CNTstartComboBox->setEnabled(true);
-            counterChannelObj[i]->CNTendComboBox->setEnabled(true);
-        }
+
+        freqScanTypeComboBoxChanged(); // setEnable Master, Slave, AOM ComboBoxes
     }
+    else {
+        int freqScanIndex = plotDockObj[0]->plotInComboBox->findText("Frequency Scan");
+        statusBar()->showMessage(QString::number(freqScanIndex));
+        if (freqScanIndex != -1) { plotDockObj[0]->plotInComboBox->removeItem(freqScanIndex); }
+
+        CsScanTabEnable(false); // setDisable Master, Slave, AOM ComboBoxes
+    }
+    for (int i = 0; i < counterChannelNum; i++) {
+        counterChannelObj[i]->CNTrefTimeComboBox->setEnabled(b);
+        counterChannelObj[i]->CNTstartComboBox->setEnabled(b);
+        counterChannelObj[i]->CNTendComboBox->setEnabled(b);
+    }
+}
+
+void MainWindow::bleachTabEnable(bool b){
+    bleachDirectionComboBox->setEnabled(b);
+    bleachProbePOComboBox->setEnabled(b);
+    bleachProbeStartComboBox->setEnabled(b);
+    bleachCleanPOComboBox->setEnabled(b);
+    bleachCleanStartComboBox->setEnabled(b);
+    bleachPumpPOComboBox1->setEnabled(b);
+    bleachPumpPOComboBox2->setEnabled(b);
+    bleachPumpStartComboBox->setEnabled(b);
+    bleachNumSpinBox->setEnabled(b);
+    bleachPeriodLine->setEnabled(b);
+    bleachTimeLine->setEnabled(b);
+    bleachRepeatProgressLine->setEnabled(b);
+    bleachTimeProgressLine->setEnabled(b);
+}
+
+void MainWindow::freqScanTypeComboBoxChanged()
+{
+    if (freqScanTypeComboBox->currentIndex() == 0) {  // Cs Scan
+       CsScanTabEnable(true);
+    }
+    else if (measureControlComboBox->currentIndex() == 1){  // DDS Scan
+       CsScanTabEnable(false);
+    }
+}
+
+void MainWindow::CsScanTabEnable(bool b){
+    freqScanMasterComboBox->setEnabled(b);
+    freqScanSlaveComboBox->setEnabled(b);
+    freqScanAOMComboBox->setEnabled(b);
 }
 
 void MainWindow::getFreqScanFinal(){
@@ -284,19 +484,22 @@ void MainWindow::startButtonPressed()
     for (repeatCount = 0; repeatCount<repeatNumSpinBox->value();repeatCount++) {
         QCoreApplication::processEvents(); // Let events process (e.g. StopButton pressed)
         if (stopFlag) { break; }
-        if (freqScanControlComboBox->currentIndex() == 0) {  // Single Run
+        if (measureControlComboBox->currentIndex() == 0) {  // Single Run
             startSingleRun();
         }
-        else if (freqScanControlComboBox->currentIndex() == 1) {  // Frequency Scan
+        else if (measureControlComboBox->currentIndex() == 1) {  // Frequency Scan
             // stopFlag = false;
             freqScanInit = freqScanInitLine->text().toFloat();
             freqScanNum = freqScanNumLine->text().toInt();
             freqScanStep = freqScanStepLine->text().toFloat();
             freqScanPeriod = freqScanPeriodLine->text().toFloat();
             freqScanFinal = freqScanFinalLine->text().toFloat();
-            freqScanDivider = 1.0/(2 - freqScanTerminalComboBox->currentIndex()); // 0.5 for P0.0, 1 for P0.1
+
+            // freqScanDivider = 1.0/(2 - freqScanTerminalComboBox->currentIndex()); // 0.5 for P0.0, 1 for P0.1
             detuneArray = new float [freqScanNum];
-            countDataArray = new int [freqScanNum];
+            if(freqScanDetectComboBox->currentIndex() == 0) { countDataArray = new int [freqScanNum]; }   // Detect by photon counter P2.0
+            else if(freqScanDetectComboBox->currentIndex() == 1) { AIDataArray = new float [freqScanNum]; }  // Detect by AI0
+
             for (freqScanCount=0;freqScanCount<freqScanNum;freqScanCount++) {
                 if (stopFlag) { break; }
                 if (freqScanDirectionComboBox->currentIndex() == 0) { // Increase frequency
@@ -315,43 +518,62 @@ void MainWindow::startButtonPressed()
                     if (freqScanNum%2) { freqMultiplier = (2*(((freqScanNum-freqScanCount)%4)/2)-1)*(2*((freqScanNum-freqScanCount)%2)-1)*((freqScanNum-freqScanCount)/2); }
                     else { freqMultiplier = (2*(((freqScanNum-freqScanCount-1)%4)/2)-1)*(2*((freqScanNum-freqScanCount-1)%2)-1)*((freqScanNum-freqScanCount-1)/2+0.5); }
                 }
-                if (freqScanMasterComboBox->currentIndex() == 0) { freqScanMaster = 0; freqScanNDiv1 = 8; freqScanNDiv2 = 64; } // Master F=4 to F'=4co5 (Reference)
-                else if (freqScanMasterComboBox->currentIndex() == 1) { freqScanMaster = -125500000; freqScanNDiv1 = 8; freqScanNDiv2 = 64;  }  // Master F=4 to F'=5
-                else if (freqScanMasterComboBox->currentIndex() == 2) { freqScanMaster = 125500000+201240000+75605000-9192631770; freqScanNDiv1 = 64; freqScanNDiv2 = 8;  }  // Master F=3 to F'=2co3
-                else if (freqScanMasterComboBox->currentIndex() == 3) { freqScanMaster = 125500000+201240000-9192631770; freqScanNDiv1 = 64; freqScanNDiv2 = 8;  }  // Master F=3 to F'=3
+                if (freqScanTypeComboBox->currentIndex() == 0) { // Cs Scan
+                    if (freqScanMasterComboBox->currentIndex() == 0) { freqScanMaster = 0; freqScanNDiv1 = 8; freqScanNDiv2 = 64; } // Master F=4 to F'=4co5 (Reference)
+                    else if (freqScanMasterComboBox->currentIndex() == 1) { freqScanMaster = -125500000; freqScanNDiv1 = 8; freqScanNDiv2 = 64;  }  // Master F=4 to F'=5
+                    else if (freqScanMasterComboBox->currentIndex() == 2) { freqScanMaster = 125500000+201240000+75605000-9192631770; freqScanNDiv1 = 64; freqScanNDiv2 = 8;  }  // Master F=3 to F'=2co3
+                    else if (freqScanMasterComboBox->currentIndex() == 3) { freqScanMaster = 125500000+201240000-9192631770; freqScanNDiv1 = 64; freqScanNDiv2 = 8;  }  // Master F=3 to F'=3
 
-                switch(freqScanAOMComboBox->currentIndex()) {
-                    case 0:
-                        freqScanAOM = -80*2;  break; // +80MHz x2
-                    case 1:
-                        freqScanAOM = 80*2;  break; // -80MHz x2
-                    case 2:
-                        freqScanAOM = -80*3;  break; // +80MHz x3
-                    case 3:
-                        freqScanAOM = -200*2;  break; // +200MHz x2
-                    case 4:
-                        freqScanAOM = 200*2;  break; // -200MHz x2
+                    switch(freqScanAOMComboBox->currentIndex()) {
+                        case 0:
+                            freqScanAOM = -80*2;  break; // +80MHz x2
+                        case 1:
+                            freqScanAOM = 80*2;  break; // -80MHz x2
+                        case 2:
+                            freqScanAOM = -80*3;  break; // +80MHz x3
+                        case 3:
+                            freqScanAOM = -200*2;  break; // +200MHz x2
+                        case 4:
+                            freqScanAOM = 200*2;  break; // -200MHz x2
+                    }
+
+                    if (freqScanSlaveComboBox->currentIndex() == 0) { // F=4 - F'=5
+                        freqScanDetune = (125500000+freqScanMaster+(freqScanAOM+freqScanRef+freqMultiplier*freqScanStep)*1000000)/freqScanNDiv1;
+                    }
+                    else if (freqScanSlaveComboBox->currentIndex() == 1) { // F=4 - F'=4
+                        freqScanDetune = (-125500000+freqScanMaster+(freqScanAOM+freqScanRef+freqMultiplier*freqScanStep)*1000000)/freqScanNDiv1;
+                    }
+                    else if (freqScanSlaveComboBox->currentIndex() == 2) { // F=4 - F'=3
+                        freqScanDetune = (-125500000+freqScanMaster-201240000+(freqScanAOM+freqScanRef+freqMultiplier*freqScanStep)*1000000)/freqScanNDiv1;
+                    }
+                    else if (freqScanSlaveComboBox->currentIndex() == 3) { // F=3 - F'=4
+                        freqScanDetune = (9192631770-125500000+freqScanMaster+(freqScanAOM+freqScanRef+freqMultiplier*freqScanStep)*1000000)/freqScanNDiv2;
+                    }
+                    else if (freqScanSlaveComboBox->currentIndex() == 4) { // F=3 - F'=3
+                        freqScanDetune = (9192631770-125500000+freqScanMaster-201240000+(freqScanAOM+freqScanRef+freqMultiplier*freqScanStep)*1000000)/freqScanNDiv2;
+                    }
+                    else if (freqScanSlaveComboBox->currentIndex() == 5) { // F=3 - F'=2
+                        freqScanDetune = (9192631770-125500000+freqScanMaster-201240000-151210000+(freqScanAOM+freqScanRef+freqMultiplier*freqScanStep)*1000000)/freqScanNDiv2;
+                    }
+                }
+                else {  // DDS Scan
+                    freqScanDetune = (freqScanRef+freqMultiplier*freqScanStep)*1000000;
                 }
 
-                if (freqScanSlaveComboBox->currentIndex() == 0) { // F=4 - F'=5
-                    freqScanDetune = abs((int)(freqScanDivider*(125500000+freqScanMaster+(freqScanAOM+freqScanRef+freqMultiplier*freqScanStep)*1000000)/freqScanNDiv1));
+                switch(freqScanTerminalComboBox->currentIndex()) {
+                case 0:
+                    freqScanDetune = abs((int)(0.5*freqScanDetune)); // P0.0 (DDS1)
+                    serialChannelObj[freqScanTerminalComboBox->currentIndex()]->SRsetLine[freqScanTimeComboBox->currentIndex()]->setText(QString::number(freqScanDetune,'f',0));
+                    break;
+                case 1:
+                    freqScanDetune = abs((int)freqScanDetune); // P0.1 (DDS3)
+                    serialChannelObj[freqScanTerminalComboBox->currentIndex()]->SRsetLine[freqScanTimeComboBox->currentIndex()]->setText(QString::number(freqScanDetune,'f',0));
+                    break;
+                case 2:
+                    freqScanDetune = fabs(0.000001*freqScanDetune); // P0.4 (Vescent)
+                    serialChannelObj[4]->SRsetLine[freqScanTimeComboBox->currentIndex()]->setText(QString::number(freqScanDetune,'f',6)); // P0.4 when P0.2, P0.3 are empty
+                    break;
                 }
-                else if (freqScanSlaveComboBox->currentIndex() == 1) { // F=4 - F'=4
-                    freqScanDetune = abs((int)(freqScanDivider*(-125500000+freqScanMaster+(freqScanAOM+freqScanRef+freqMultiplier*freqScanStep)*1000000)/freqScanNDiv1));
-                }
-                else if (freqScanSlaveComboBox->currentIndex() == 2) { // F=4 - F'=3
-                    freqScanDetune = abs((int)(freqScanDivider*(-125500000+freqScanMaster-201240000+(freqScanAOM+freqScanRef+freqMultiplier*freqScanStep)*1000000)/freqScanNDiv1));
-                }
-                else if (freqScanSlaveComboBox->currentIndex() == 3) { // F=3 - F'=4
-                    freqScanDetune = abs((int)(freqScanDivider*(9192631770-125500000+freqScanMaster+(freqScanAOM+freqScanRef+freqMultiplier*freqScanStep)*1000000)/freqScanNDiv2));
-                }
-                else if (freqScanSlaveComboBox->currentIndex() == 4) { // F=3 - F'=3
-                    freqScanDetune = abs((int)(freqScanDivider*(9192631770-125500000+freqScanMaster-201240000+(freqScanAOM+freqScanRef+freqMultiplier*freqScanStep)*1000000)/freqScanNDiv2));
-                }
-                else if (freqScanSlaveComboBox->currentIndex() == 5) { // F=3 - F'=2
-                    freqScanDetune = abs((int)(freqScanDivider*(9192631770-125500000+freqScanMaster-201240000-151210000+(freqScanAOM+freqScanRef+freqMultiplier*freqScanStep)*1000000)/freqScanNDiv2));
-                }
-                serialChannelObj[freqScanTerminalComboBox->currentIndex()]->SRsetLine[freqScanTimeComboBox->currentIndex()]->setText(QString::number(freqScanDetune));
 
                 QCoreApplication::processEvents(); // Let events process (e.g. StopButton pressed)
                 startSingleRun();
@@ -360,7 +582,7 @@ void MainWindow::startButtonPressed()
                 QThread::msleep((int) 1000*freqScanPeriod);
             }
 
-            if (stopFlag == false) {
+            if (stopFlag == false) { // write on to file
                 time_t rawtime;
                 struct tm * timeinfo;
                 time ( &rawtime );
@@ -374,23 +596,81 @@ void MainWindow::startButtonPressed()
                 freqScanSlaveText = freqScanSlaveComboBox->currentText();
                 freqScanMasterBA = freqScanMasterText.toLatin1();
                 freqScanSlaveBA = freqScanSlaveText.toLatin1();
-                fprintf(fp, "Master %s, Slave %s\n",freqScanMasterBA.data(),freqScanSlaveBA.data());
-                fprintf(fp, "Detuning (MHz)\tCount\n");
+                if (freqScanTypeComboBox->currentIndex() == 0) { fprintf(fp, "Master %s, Slave %s\n",freqScanMasterBA.data(),freqScanSlaveBA.data()); }
                 int i;
-                for(i=0; i<freqScanNum; i++) {
-                   fprintf(fp, "%.5f\t%d\n", detuneArray[i], countDataArray[i]);
+                if (freqScanDetectComboBox->currentIndex() == 0) {    // Detect by photon counter P2.0
+                    fprintf(fp, "Frequency (MHz)\tCount\n");
+                    for(i=0; i<freqScanNum; i++) { fprintf(fp, "%.5f\t%d\n", detuneArray[i], countDataArray[i]);}
+                }
+                else if (freqScanDetectComboBox->currentIndex() == 1) {   // Detect by AI0
+                    fprintf(fp, "Frequency (MHz)\tVoltage (V)\n");
+                    for(i=0; i<freqScanNum; i++) { fprintf(fp, "%.5f\t%.6f\n", detuneArray[i], AIDataArray[i]);}
                 }
                 fclose(fp);
             }
 
             delete[] detuneArray;
-            delete[] countDataArray;
+            if(freqScanDetectComboBox->currentIndex() == 0) { delete[] countDataArray; }   // Detect by photon counter P2.0
+            else if(freqScanDetectComboBox->currentIndex() == 1) { delete[] AIDataArray; }  // Detect by AI0
+        }
+        else if (measureControlComboBox->currentIndex() == 2) {  // Bleach
+            pumpTimeList = bleachTimeLine->text().split(',', QString::SkipEmptyParts);
+            bleachRepeatNum = bleachNumSpinBox->value();
+            bleachTimeNum = pumpTimeList.size();
+            bleachPeriod = bleachPeriodLine->text().toFloat();
+            bleachWaitTime = 5 * clockSpeedSpinBox->value(); // Time between clean and pump, & Time between pump and probe
+            bleachCleanTime = 50 * clockSpeedSpinBox->value(); // Cleaning pulse duration
+            int probeCh = DOBoxPortNum + bleachProbePOComboBox->currentIndex();
+            int probeStart = bleachProbeStartComboBox->currentIndex();
+            bleachProbeStart = pulseChannelObj[probeCh]->P0timeLine[probeStart]->text().toInt();
+            int cleanCh = DOBoxPortNum + bleachCleanPOComboBox->currentIndex();
+            int cleanStart = bleachCleanStartComboBox->currentIndex();
+            int pumpCh1 = DOBoxPortNum + bleachPumpPOComboBox1->currentIndex();
+            int pumpCh2 = DOBoxPortNum + bleachPumpPOComboBox2->currentIndex();
+            int pumpStart = bleachPumpStartComboBox->currentIndex();
+
+            if(bleachDirectionComboBox->currentIndex() == 0) { // Time scan -> Repeat
+                for (bleachRepeatCount = 0; bleachRepeatCount < bleachRepeatNum; bleachRepeatCount++) {
+                    for (bleachTimeCount = 0; bleachTimeCount < bleachTimeNum; bleachTimeCount++) {
+                        if (stopFlag) { break; }
+                        bleachRun(cleanCh, cleanStart, pumpCh1, pumpCh2, pumpStart);
+                    }
+                }
+            }
+            else if(bleachDirectionComboBox->currentIndex() == 1) { // Repeat -> Time scan
+                for (bleachTimeCount = 0; bleachTimeCount < bleachTimeNum; bleachTimeCount++) {
+                    for (bleachRepeatCount = 0; bleachRepeatCount < bleachRepeatNum; bleachRepeatCount++) {
+                        if (stopFlag) { break; }
+                        bleachRun(cleanCh, cleanStart, pumpCh1, pumpCh2, pumpStart);
+                    }
+                }
+            }
         }
         QCoreApplication::processEvents(); // Let events process (e.g. StopButton pressed)
         QThread::msleep(50);
         if (stopFlag) { break; }
         repeatProgressLine->setText(QString::number(repeatCount+1)+"/"+QString::number(repeatNumSpinBox->value()));
+
     } // End of the loop for 'repeat'
+}
+
+void MainWindow::bleachRun(int _cleanCh, int _cleanStart, int _pumpCh1, int _pumpCh2, int _pumpStart){
+    bleachCleanStart = bleachProbeStart - bleachWaitTime - pumpTimeList[bleachTimeCount].toInt() - bleachWaitTime - bleachCleanTime;
+    pulseChannelObj[_cleanCh]->P0timeLine[_cleanStart]->setText(QString::number(bleachCleanStart));  // Start time of Cleaning pulse
+    pulseChannelObj[_cleanCh]->P0timeLine[_cleanStart+1]->setText(QString::number(bleachCleanStart+bleachCleanTime));  // Start time of Cleaning pulse
+
+    bleachPumpStart = bleachProbeStart - bleachWaitTime - pumpTimeList[bleachTimeCount].toInt();
+    pulseChannelObj[_pumpCh1]->P0timeLine[_pumpStart]->setText(QString::number(bleachPumpStart));  // Start time of Cleaning pulse
+    pulseChannelObj[_pumpCh1]->P0timeLine[_pumpStart+1]->setText(QString::number(bleachPumpStart+pumpTimeList[bleachTimeCount].toInt()));  // Start time of Cleaning pulse
+    pulseChannelObj[_pumpCh2]->P0timeLine[_pumpStart]->setText(QString::number(bleachPumpStart));  // Start time of Cleaning pulse
+    pulseChannelObj[_pumpCh2]->P0timeLine[_pumpStart+1]->setText(QString::number(bleachPumpStart+pumpTimeList[bleachTimeCount].toInt()));  // Start time of Cleaning pulse
+
+    QCoreApplication::processEvents(); // Let events process (e.g. StopButton pressed)
+    startSingleRun();
+    bleachRepeatProgressLine->setText(QString::number(bleachRepeatCount+1)+"/"+QString::number(bleachRepeatNum));
+    bleachTimeProgressLine->setText(QString::number(bleachTimeCount+1)+"/"+QString::number(bleachTimeNum));
+    QCoreApplication::processEvents(); // Let events processed (e.g. StopButton pressed)
+    QThread::msleep((int) 1000*bleachPeriod);
 }
 
 /*
@@ -567,7 +847,7 @@ void MainWindow::startSingleRun()
                         // for(p=0; p<4; p++){
                         for(p=0; p<9; p++){
                           P0data[j+m] ^= (-SRcommandBit[l] ^ P0data[j+m]) & temporalBit;
-                          P0data[j+m] ^= (-SRcommandBit[l] ^ P0data[j+m]) & (1<<10); // Duplicate the serial command on P0.10
+                          // P0data[j+m] ^= (-SRcommandBit[l] ^ P0data[j+m]) & (1<<10); // Duplicate the serial command on P0.10
                           m++;
                         }
                       }
@@ -575,7 +855,7 @@ void MainWindow::startSingleRun()
                         // for(p=0; p<5; p++){
                         for(p=0; p<8; p++){
                           P0data[j+m] ^= (-SRcommandBit[l] ^ P0data[j+m]) & temporalBit;
-                          P0data[j+m] ^= (-SRcommandBit[l] ^ P0data[j+m]) & (1<<10); // Duplicate the serial command on P0.10
+                          // P0data[j+m] ^= (-SRcommandBit[l] ^ P0data[j+m]) & (1<<10); // Duplicate the serial command on P0.10
                           m++;
                         }
                       }
@@ -724,15 +1004,21 @@ void MainWindow::startSingleRun()
 
     // ****************** End of  Write DAQmx Code (Counter, AI) ***********************
 
-    /********************** Save SPCM count for frequency scan *********************/
-    if ((freqScanControlComboBox->currentIndex() == 1) & (counterChannelObj[0]->channelCheckBox->isChecked())) {
+    /********************** Save measured data for frequency scan *********************/
+    if (measureControlComboBox->currentIndex() == 1)  {  // Frequency Scan
         detuneArray[freqScanCount] = freqScanRef+freqMultiplier*freqScanStep;
-        int ch = DOBoxPortNum + counterChannelObj[0]->CNTrefTimeComboBox->currentIndex();
-        int tStart = counterChannelObj[0]->CNTstartComboBox->currentIndex();
-        int tEnd = counterChannelObj[0]->CNTendComboBox->currentIndex();
-        int CNTrate = counterChannelObj[0]->CNTrateSpinBox->value();
-        countDataArray[freqScanCount] = CNTdata[(pulseChannelObj[ch]->P0timeLine[tEnd]->text().toInt())/CNTrate] - CNTdata[(pulseChannelObj[ch]->P0timeLine[tStart]->text().toInt())/CNTrate];
-        // countDataArray[freqScanCount] = CNTdata[(pulseChannelObj[ch]->P0timeLine[tEnd]->text().toInt())/(counterChannelObj[0]->CNTrateSpinBox->value())] - CNTdata[(pulseChannelObj[ch]->P0timeLine[tStart]->text().toInt())/(counterChannelObj[0]->CNTrateSpinBox->value())];
+        if ((freqScanDetectComboBox->currentIndex() ==0) & (counterChannelObj[0]->channelCheckBox->isChecked())) { //  Detect by P2.0 & Counter activated
+            int ch = DOBoxPortNum + counterChannelObj[0]->CNTrefTimeComboBox->currentIndex();
+            int tStart = counterChannelObj[0]->CNTstartComboBox->currentIndex();
+            int tEnd = counterChannelObj[0]->CNTendComboBox->currentIndex();
+            int CNTrate = counterChannelObj[0]->CNTrateSpinBox->value();
+            countDataArray[freqScanCount] = CNTdata[(pulseChannelObj[ch]->P0timeLine[tEnd]->text().toInt())/CNTrate] - CNTdata[(pulseChannelObj[ch]->P0timeLine[tStart]->text().toInt())/CNTrate];
+        }
+        if (freqScanDetectComboBox->currentIndex() == 1) { // Detect by AI0
+            // AItimeIndex = analogInChannelObj[i]->AIrateSpinBox->value()/refClockSpeed;
+            // Average of last five data points, need to be updated
+            AIDataArray[freqScanCount] = (AIdata[dataSize-10] + AIdata[dataSize-20] + AIdata[dataSize-30] + AIdata[dataSize-40] + AIdata[dataSize-50])/5;
+        }
     }
     /*******************************************************************************/
 
@@ -771,6 +1057,7 @@ void MainWindow::startSingleRun()
                      plotDockObj[i]->plotDockUpdate(xLowLim, xHighLim, CNTdataSize, counterChannelObj[m-1-analogInChannelNum]->CNTrateSpinBox->value(),CNTdata);
                  }
              }
+
              else {  // plot Frequency Scan
                  // plotDockObj[i]->plotFreqScan(freqScanInit, freqScanCount+1, freqScanNum, freqScanStep, countDataArray);
                  plotDockObj[i]->plotFreqScan(freqScanInit, freqScanCount+1, freqScanNum, freqScanStep, detuneArray, countDataArray);
@@ -1041,7 +1328,7 @@ void MainWindow::createChannelGroupBox()
     }
 
     for (i = 0; i < serialChannelNum; i++) {
-        if((i==2) or (i==3)) {}\
+        if((i==2) or (i==3)) {} // P0.2, P0.3 empty
         else{
             j = analogInChannelNum + counterChannelNum + i + 3;
             channelLayout->addWidget(serialChannelObj[i]->channelCheckBox,j,0);
@@ -1103,12 +1390,26 @@ void MainWindow::createChannelGroupBox()
         channelLayout->addWidget(analogOutChannelObj[i]->AOtimeLine[k],j,5+2*k+1);
       }
     }
-    channelGroupBox->setLayout(channelLayout);
+
+    channelScrollWidget = new QWidget;
+    channelScrollWidget->setLayout(channelLayout);
+
+    channelScrollArea = new QScrollArea;
+    channelScrollArea->setWidgetResizable(true);  // Set to make the inner widget resize with scroll area
+    channelScrollArea->setWidget(channelScrollWidget);
+    channelScrollArea->setFrameShape(QFrame::NoFrame);
+
+    channelGroupLayout = new QGridLayout;
+    channelGroupLayout->addWidget(channelScrollArea);
+
+    channelGroupBox->setLayout(channelGroupLayout);
+
 }
 
 void MainWindow::createNoteGroupBox()
 {
   noteGroupBox = new QGroupBox(tr("Measurement Note"));
+  noteGroupBox->setFixedHeight(80); // Set the vertical size of the noteGroupBox
 
   noteText = new QTextEdit;
 

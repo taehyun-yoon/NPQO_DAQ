@@ -34,7 +34,8 @@ private slots:
   void updateReadRate();
 //  void plotUpdate(int);
 //  void writeControlCheckBoxClicked();
-  void freqScanControlComboBoxChanged();
+  void measureControlComboBoxChanged();
+  void freqScanTypeComboBoxChanged();
   void startButtonPressed();
   void getFreqScanFinal();
 //  void setFreqText(int detune);
@@ -46,7 +47,9 @@ private slots:
 
 private:
   void createControlGroupBox();
+  void createTabWidget();
   void createFreqScanGroupBox();
+  void createBleachGroupBox();
   void createChannelGroupBox();
   void createNoteGroupBox();
   void createActions();
@@ -55,6 +58,10 @@ private:
   void createStatusBar();
   void createDockWindows();
   void startSingleRun();
+  void bleachRun(int _cleanCh, int _cleanStart, int _pumpCh1, int pumpCh2, int pumpStart);
+  void freqScanTabEnable(bool b);
+  void bleachTabEnable(bool b);
+  void CsScanTabEnable(bool b);
   void keyPressEvent(QKeyEvent *event);
 
   bool stopFlag;
@@ -94,20 +101,34 @@ private:
   float freqScanPeriod;
   float freqMultiplier;
   float freqScanRef;
-  float freqScanDivider;
+  // float freqScanDivider;
   float freqScanMaster;
   int freqScanAOM;
   int freqScanNDiv1;
   int freqScanNDiv2;
   int freqScanProgress;
-  int freqScanDetune;
+  float freqScanDetune;
+  int freqScanDetuneInt;
   int freqScanCount;
   float *detuneArray;
   int *countDataArray;
+  float *AIDataArray;
+  int bleachRepeatNum;
+  int bleachRepeatCount;
+  int bleachTimeNum;
+  int bleachTimeCount;
+  int bleachProbeStart;
+  int bleachCleanStart;
+  int bleachPumpStart;
+  int bleachWaitStart;
+  int bleachCleanTime;
+  int bleachWaitTime;
+  float bleachPeriod;
   QString freqScanMasterText;
   QString freqScanSlaveText;
   QByteArray freqScanMasterBA;
   QByteArray freqScanSlaveBA;
+  QStringList pumpTimeList;
 
   TaskHandle  P0taskHandle;
   TaskHandle  AItaskHandle;
@@ -115,15 +136,21 @@ private:
   TaskHandle  CNTtaskHandle;
   float64 timeout;
 
+  QWidget *channelScrollWidget;
+  QTabWidget *tabWidget;
+  QScrollArea *channelScrollArea;
   QGroupBox *controlGroupBox;
-  QGroupBox *freqScanGroupBox;
+//  QGroupBox *freqScanGroupBox;
+  QWidget *freqScanWidget;
+  QWidget *bleachWidget;
+  QGroupBox *bleachGroupBox;
   QGroupBox *channelGroupBox;
   QGroupBox *noteGroupBox;
   QTextEdit *textEdit;
   //  QListWidget *customerList;
   //  QListWidget *paragraphsList;
 
-  QComboBox *freqScanControlComboBox;
+  QComboBox *measureControlComboBox;
   QSpinBox *clockSpeedSpinBox;
   QSpinBox *repeatNumSpinBox;
   QCheckBox *writeDataCheckBox;
@@ -133,6 +160,7 @@ private:
   QTextEdit *noteText;
   // QString *freqScanTimeString;
   QCheckBox *writeNoteCheckBox;
+  QComboBox *freqScanTypeComboBox;
   QComboBox *freqScanMasterComboBox;
   QComboBox *freqScanTerminalComboBox;
   QComboBox *freqScanTimeComboBox;
@@ -146,6 +174,20 @@ private:
   QLineEdit *freqScanNumLine;
   QLineEdit *freqScanPeriodLine;
   QLineEdit *freqScanProgressLine;
+  QComboBox *freqScanDetectComboBox;
+  QComboBox *bleachDirectionComboBox;
+  QSpinBox *bleachNumSpinBox;
+  QComboBox *bleachProbePOComboBox;
+  QComboBox *bleachCleanPOComboBox;
+  QComboBox *bleachPumpPOComboBox1;
+  QComboBox *bleachPumpPOComboBox2;
+  QComboBox *bleachProbeStartComboBox;
+  QComboBox *bleachCleanStartComboBox;
+  QComboBox *bleachPumpStartComboBox;
+  QLineEdit *bleachTimeLine;
+  QLineEdit *bleachPeriodLine;
+  QLineEdit *bleachRepeatProgressLine;
+  QLineEdit *bleachTimeProgressLine;
   // QLineEdit *progressControlLine;
   // QLineEdit *cycleControlLine;
 
@@ -169,9 +211,11 @@ private:
 
   QWidget *window;
   //QGridLayout *windowLayout;
+  QGridLayout *channelGroupLayout;
   QVBoxLayout *windowLayout;
   QGridLayout *controlLayout;
   QGridLayout *freqScanLayout;
+  QGridLayout *bleachLayout;
   QGridLayout *channelLayout;
   QGridLayout *noteLayout;
 

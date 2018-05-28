@@ -18,7 +18,7 @@ ChannelClass::ChannelClass(QString str1)
  
     analogInChannelCount++;
   }
-  else if (str1 == "P1")
+  else if (str1 == "P2")
   {
     str1.append(".");
     str1.append(QString::number(counterChannelCount));

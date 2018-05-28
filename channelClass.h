@@ -12,12 +12,12 @@
 /******************************** No DAQ CARD **********************************/
 
 
-#define analogInChannelNum 2 // number of AI channels
+#define analogInChannelNum 3 // number of AI channels
 #define counterChannelNum 1 // Number of CNT channels
 #define serialChannelNum 5 // Number of SR channels
-#define pulseChannelNum 11 // number of P0 channels
+#define pulseChannelNum 13 // number of P0 channels
 #define analogOutChannelNum 4 // Number of AO channels
-#define DOBoxPortNum 8 // Starting port number P0.X (P0.0 - P0.5), P0.6: 3.3V DO2, P0.7: 3.3V DO3
+#define DOBoxPortNum 6 // Starting port number P0.X (P0.0 - P0.5), P0.6: 3.3V DO2, P0.7: 3.3V DO3
 #define pulseNum 6 // Number of pulses per each P0 channel
 #define serialNum pulseNum // Number of serials per each P0 channel
 #define analogOutNum pulseNum // Number of analog value changes per each AO channel
@@ -30,18 +30,20 @@
 
 QT_BEGIN_NAMESPACE
 class QAction;
-class QListWidget;
-class QMenu;
-class QLineEdit;
-class QTextEdit;
-class QGroupBox;
-class QLabel;
-class QComboBox;
-class QSpinBox;
 class QCheckBox;
+class QComboBox;
 class QGridLayout;
+class QGroupBox;
 class QInputDialog;
+class QLabel;
+class QListWidget;
+class QLineEdit;
+class QMenu;
+class QScollArea;
+class QSpinBox;
+class QTextEdit;
 class QTimer;
+class QWidget;
 QT_END_NAMESPACE
 
 class ChannelClass : public QObject
