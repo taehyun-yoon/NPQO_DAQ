@@ -6,7 +6,7 @@ This repository contains codes of a GUI program on the Qt application framework 
 Overview
 --------
 
-Our tools handle OEIS data from three running modes:
+This program has three different operation modes under three tabs.
 
 1. Single: run the sequential commands set once
 2. Frequncy Scan:  run the sequential commands set by sweeping an offset locking frequency, collect data from a single photon counting module (SPCM), and plot the data in real-time
