@@ -64,4 +64,9 @@ qcustomplot.cpp              |
 How it all fits together
 ------------------------
 
-<img alt="Overview of OEIS tools" src="docs/oeis-tools.png" width="75%">
+<img alt="Overview of OEIS tools" src="docs/NPQO-NIDAQ-structure.png" width="75%">
+
+Screenshot
+------------------------
+
+<img alt="Overview of OEIS tools" src="docs/screenshot.png" width="75%">
