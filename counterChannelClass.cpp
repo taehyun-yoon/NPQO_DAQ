@@ -1,6 +1,6 @@
 #include "counterChannelClass.h"
 
-CounterChannelClass::CounterChannelClass() : ChannelClass("P2")
+CounterChannelClass::CounterChannelClass() : ChannelClass("P")
 {
   CNTrateSpinBox = new QSpinBox;
   CNTrateSpinBox->setEnabled(false);
@@ -26,31 +26,30 @@ CounterChannelClass::CounterChannelClass() : ChannelClass("P2")
 
 void CounterChannelClass::counterCheckBoxClicked()
 {
-  if (channelCheckBox->isChecked()) {
-    channelNameLine->setEnabled(true);
-    CNTrateSpinBox->setEnabled(true);
-
-//    createCNTtaskHandle();
-
-//    CNTconvertComboBox->setEnabled(true);
-
-//    writeFile = fopen("dummy.txt", "w");
-//    fclose(writeFile);
-//    remove("dummy.txt");
-
-  }
-  else {
-    channelNameLine->setEnabled(false);
-    CNTrateSpinBox->setEnabled(false);
-//    CNTconvertComboBox->setEnabled(false);
-  }
+    if (channelCheckBox->isChecked()) {
+        channelNameLine->setEnabled(true);
+        CNTrateSpinBox->setEnabled(true);
+    }
+    else {
+        channelNameLine->setEnabled(false);
+        CNTrateSpinBox->setEnabled(false);
+    }
+    CNTrefTimeEnable();
 }
 
 void CounterChannelClass::CNTrateSpinBoxChanged()
 {
-  int t = CNTrateSpinBox->value();
-  int ref = getClockSpeed();
-  if((t%ref)!=0) { CNTrateSpinBox->setValue(getRound(t, ref)); }
+    int t = CNTrateSpinBox->value();
+    int ref = getClockSpeed();
+    if((t%ref)!=0) { CNTrateSpinBox->setValue(getRound(t, ref)); }
+}
+
+void CounterChannelClass::CNTrefTimeEnable()
+{
+    bool bCh = channelCheckBox->isChecked();
+    CNTrefTimeComboBox->setEnabled(freqScanFlag && bCh);
+    CNTstartComboBox->setEnabled(freqScanFlag && bCh);
+    CNTendComboBox->setEnabled(freqScanFlag && bCh);
 }
 
 void CounterChannelClass::createCNTtaskHandle()

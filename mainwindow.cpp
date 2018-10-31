@@ -3,7 +3,8 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
-  resize(1280,800);
+//  setAttribute(Qt::WA_DeleteOnClose);
+
   createControlGroupBox();
   createChannelGroupBox();
   createFreqScanGroupBox();
@@ -24,13 +25,15 @@ MainWindow::MainWindow(QWidget *parent)
   setCentralWidget(window);
 
 
+  createStatusBar();
   createActions();
   createMenus();
   // createToolBars();
-  createStatusBar();
   createDockWindows();
 
+  setWindowFilePath(QString());
   setWindowTitle(tr("NI-DAQ"));
+  resize(1280,800);
 }
 
 void MainWindow::createControlGroupBox()
@@ -220,7 +223,7 @@ void MainWindow::createFreqScanGroupBox() {
 
   QLabel *freqScanDetectLabel = new QLabel(tr("Detect"));
   freqScanDetectComboBox = new QComboBox;
-  freqScanDetectComboBox->addItem("P2.0");
+  freqScanDetectComboBox->addItem("P1,P2");
   freqScanDetectComboBox->addItem("AI0");
   freqScanDetectComboBox->setEnabled(false);
 
@@ -385,15 +388,18 @@ void MainWindow::createBleachGroupBox() {
 void MainWindow::measureControlComboBoxChanged()
 {
     if (measureControlComboBox->currentIndex() == 0) {  // Single
+       CounterChannelClass::freqScanFlag = false;
        freqScanTabEnable(false);
        bleachTabEnable(false);
     }
     else if (measureControlComboBox->currentIndex() == 1){  // Frequency Scan
+       CounterChannelClass::freqScanFlag = true;
        freqScanTabEnable(true);
        bleachTabEnable(false);
        tabWidget->setCurrentIndex(0);
     }
     else if (measureControlComboBox->currentIndex() == 2){  // Bleach
+       CounterChannelClass::freqScanFlag = false;
        freqScanTabEnable(false);
        bleachTabEnable(true);
        tabWidget->setCurrentIndex(1);
@@ -401,6 +407,7 @@ void MainWindow::measureControlComboBoxChanged()
 }
 
 void MainWindow::freqScanTabEnable(bool b){
+    int i, j;
     freqScanTypeComboBox->setEnabled(b);
     // freqScanMasterComboBox->setEnabled(b);
     freqScanTerminalComboBox->setEnabled(b);
@@ -418,21 +425,34 @@ void MainWindow::freqScanTabEnable(bool b){
 
     // add in the plot list, currently works only for plotDockObj[0], needs to be updated
     if (b == true) {
-        plotDockObj[0]->plotInComboBox->addItem("Frequency Scan");
+        for(i=0; i<plotDockNum; i++) {
+            for(j=0; j<counterChannelNum; j++) {
+                plotDockObj[i]->plotInComboBox->addItem("Freq Scan " + counterChannelObj[j]->channelTerminalLabel->text());
+            }
+        }
 
         freqScanTypeComboBoxChanged(); // setEnable Master, Slave, AOM ComboBoxes
     }
     else {
-        int freqScanIndex = plotDockObj[0]->plotInComboBox->findText("Frequency Scan");
-        statusBar()->showMessage(QString::number(freqScanIndex));
-        if (freqScanIndex != -1) { plotDockObj[0]->plotInComboBox->removeItem(freqScanIndex); }
+        int freqScanIndex;
+        for(i=0; i<plotDockNum; i++) {
+            for(j=0; j<counterChannelNum; j++) {
+                freqScanIndex = plotDockObj[i]->plotInComboBox->findText("Freq Scan " + counterChannelObj[j]->channelTerminalLabel->text());
+                // statusBar()->showMessage(QString::number(freqScanIndex));
+                if (freqScanIndex != -1) { plotDockObj[i]->plotInComboBox->removeItem(freqScanIndex); }
+            }
+        }
 
         CsScanTabEnable(false); // setDisable Master, Slave, AOM ComboBoxes
     }
-    for (int i = 0; i < counterChannelNum; i++) {
-        counterChannelObj[i]->CNTrefTimeComboBox->setEnabled(b);
-        counterChannelObj[i]->CNTstartComboBox->setEnabled(b);
-        counterChannelObj[i]->CNTendComboBox->setEnabled(b);
+    for (i = 0; i < counterChannelNum; i++) {
+        counterChannelObj[i]->CNTrefTimeEnable();
+        /*
+        bool bCh = counterChannelObj[i]->isChecked();
+        counterChannelObj[i]->CNTrefTimeComboBox->setEnabled(b && bCh);
+        counterChannelObj[i]->CNTstartComboBox->setEnabled(b && bCh);
+        counterChannelObj[i]->CNTendComboBox->setEnabled(b && bCh);
+        */
     }
 }
 
@@ -479,6 +499,7 @@ void MainWindow::getFreqScanFinal(){
 
 void MainWindow::startButtonPressed()
 {
+    int i, k;
     stopFlag = false;
     repeatProgressLine->setText(QString::number(0)+"/"+QString::number(repeatNumSpinBox->value()));
     for (repeatCount = 0; repeatCount<repeatNumSpinBox->value();repeatCount++) {
@@ -497,7 +518,10 @@ void MainWindow::startButtonPressed()
 
             // freqScanDivider = 1.0/(2 - freqScanTerminalComboBox->currentIndex()); // 0.5 for P0.0, 1 for P0.1
             detuneArray = new float [freqScanNum];
-            if(freqScanDetectComboBox->currentIndex() == 0) { countDataArray = new int [freqScanNum]; }   // Detect by photon counter P2.0
+            if(freqScanDetectComboBox->currentIndex() == 0) { // Detect by photon counter P1 or P2
+                countDataArray = new int*[counterChannelNum];
+                for(i=0; i<counterChannelNum; i++) { countDataArray[i] = new int[freqScanNum]; }
+            }
             else if(freqScanDetectComboBox->currentIndex() == 1) { AIDataArray = new float [freqScanNum]; }  // Detect by AI0
 
             for (freqScanCount=0;freqScanCount<freqScanNum;freqScanCount++) {
@@ -598,12 +622,24 @@ void MainWindow::startButtonPressed()
                 freqScanSlaveBA = freqScanSlaveText.toLatin1();
                 if (freqScanTypeComboBox->currentIndex() == 0) { fprintf(fp, "Master %s, Slave %s\n",freqScanMasterBA.data(),freqScanSlaveBA.data()); }
                 int i;
-                if (freqScanDetectComboBox->currentIndex() == 0) {    // Detect by photon counter P2.0
-                    fprintf(fp, "Frequency (MHz)\tCount\n");
-                    for(i=0; i<freqScanNum; i++) { fprintf(fp, "%.5f\t%d\n", detuneArray[i], countDataArray[i]);}
+                if (freqScanDetectComboBox->currentIndex() == 0) {    // Detect by photon counter P1 and P2
+                    if (activeCNTchannelNum == 1) {
+                        fprintf(fp, "Freq(MHz)\tcnt\n");
+                        for(k=0; k<counterChannelNum; k++)
+                        {
+                            if(counterChannelObj[k]->channelCheckBox->isChecked()) {
+                                for(i=0; i<freqScanNum; i++) { fprintf(fp, "%.5f\t%d\n", detuneArray[i], countDataArray[k][i]);}
+                            }
+                        }
+
+                    }
+                    else if (activeCNTchannelNum == 2) {
+                        fprintf(fp, "Freq(MHz)\tcnt(P1)\tcnt(P2)\n");
+                        for(i=0; i<freqScanNum; i++) { fprintf(fp, "%.5f\t%d\t%d\n", detuneArray[i], countDataArray[0][i], countDataArray[1][i]); }
+                    }
                 }
                 else if (freqScanDetectComboBox->currentIndex() == 1) {   // Detect by AI0
-                    fprintf(fp, "Frequency (MHz)\tVoltage (V)\n");
+                    fprintf(fp, "Freq(MHz)\tVol(V)\n");
                     for(i=0; i<freqScanNum; i++) { fprintf(fp, "%.5f\t%.6f\n", detuneArray[i], AIDataArray[i]);}
                 }
                 fclose(fp);
@@ -688,6 +724,7 @@ void MainWindow::startSingleRun()
     P0flag = false;
     activeAOchannelNum = 0;
     activeAIchannelNum = 0;
+    activeCNTchannelNum = 0;
     lastTime = 0;
 
     for(i=0; i<serialChannelNum; i++) {
@@ -727,16 +764,23 @@ void MainWindow::startSingleRun()
        }
     }
 
-    for(i=0; i<counterChannelNum; i++) { P0flag = P0flag || (counterChannelObj[i]->channelCheckBox->isChecked()); }
+    for(i=0; i<counterChannelNum; i++) {
+        if(counterChannelObj[i]->channelCheckBox->isChecked()) { activeCNTchannelNum++; }
+        P0flag = P0flag || (counterChannelObj[i]->channelCheckBox->isChecked());
+    }
 
     // ******************************* Create Task Handles *************************************
     if(P0flag) {
         P0taskHandle = 0;
         DAQmxCreateTask("",&P0taskHandle);
         DAQmxCreateDOChan(P0taskHandle,"Dev1/port0","",DAQmx_Val_ChanForAllLines);
-        if(counterChannelObj[0]->channelCheckBox->isChecked()) {
-            CNTdataSize = (lastTime/counterChannelObj[0]->CNTrateSpinBox->value()+1);
-            // CNTdataSize = (lastTime/counterChannelObj[0]->CNTrateSpinBox->value());
+        CNTdataSizeMax = 0;
+        for(k=0; k<counterChannelNum; k++) {
+            CNTdataSize[k] = 0;
+            if(counterChannelObj[k]->channelCheckBox->isChecked()) {
+                CNTdataSize[k] = (lastTime/counterChannelObj[k]->CNTrateSpinBox->value()+1);
+                if(CNTdataSize[k]>CNTdataSizeMax) { CNTdataSizeMax = CNTdataSize[k]; }
+            }
         }
     }
 
@@ -752,11 +796,17 @@ void MainWindow::startSingleRun()
         DAQmxCreateAOVoltageChan(AOtaskHandle,AOchan,"",minVoltage,maxVoltage,DAQmx_Val_Volts,NULL);
     }
 
-    if(counterChannelObj[0]->channelCheckBox->isChecked()) {
-        CNTtaskHandle = 0;
-        DAQmxCreateTask("",&CNTtaskHandle);
-        // DAQmxCreateCICountEdgesChan(CNTtaskHandle,counterChannelObj[0]->chan,"",DAQmx_Val_Rising,0,DAQmx_Val_CountUp);
-        DAQmxCreateCICountEdgesChan(CNTtaskHandle,"Dev1/ctr0","",DAQmx_Val_Rising,0,DAQmx_Val_CountUp);
+    if(activeCNTchannelNum != 0) {
+        for(i=0; i<counterChannelNum; i++)
+        {
+            if(counterChannelObj[i]->channelCheckBox->isChecked()) {
+                CNTtaskHandle[i] = 0;
+                DAQmxCreateTask("",&CNTtaskHandle[i]);
+                DAQmxCreateCICountEdgesChan(CNTtaskHandle[i],counterChannelObj[i]->chan,"",DAQmx_Val_Rising,0,DAQmx_Val_CountUp);
+                // DAQmxCreateCICountEdgesChan(CNTtaskHandle[i],"Dev1/ctr0","",DAQmx_Val_Rising,0,DAQmx_Val_CountUp);
+                // statusBar()->showMessage(counterChannelObj[i]->chan);
+            }
+        }
     }
 
     // ******************************** Prepare Parameters *************************************
@@ -803,7 +853,6 @@ void MainWindow::startSingleRun()
           if(serialChannelObj[i]->channelCheckBox->isChecked()) {
               SRsetString = new QString[(serialChannelObj[i]->pulseCount)+1];
               P0timeIndex = new int[(serialChannelObj[i]->pulseCount)+1];
-
               P0timeIndex[0] = 0;
 
               for(k=0; k < (serialChannelObj[i]->pulseCount)+1; k++) {
@@ -814,7 +863,6 @@ void MainWindow::startSingleRun()
                       SRsetString[k] = serialChannelObj[i]->SRsetLine[k]->text();
                       SRsetString[k].replace(QString("\\r"),QString("\r"));
                   }
-
                   P0timeIndex[k] = (serialChannelObj[i]->P0timeLine[k]->text().toInt())/refClockSpeed;
               }
 
@@ -957,21 +1005,27 @@ void MainWindow::startSingleRun()
         }
     }
 
-    if(counterChannelObj[0]->channelCheckBox->isChecked()) {
+    if(activeCNTchannelNum != 0) {
+        CNTdata = new uInt32*[counterChannelNum];
+        for(k=0; k<counterChannelNum; k++) { CNTdata[k] = new uInt32[CNTdataSizeMax]; }
+        for(k=0; k<counterChannelNum; k++)
+        {
+            if(counterChannelObj[k]->channelCheckBox->isChecked()) {
+                // ****************** Generate External Clock for counter on P0 ************************
+                if (k==0) { temporalBit = 1 << cntTrigPort1; }  // P0.19 is used for the external clock; P0.19 to P1.4
+                else if (k==1) { temporalBit = 1 << cntTrigPort2; }  // P0.18 is used for the external clock; P0.18 to P2.1
 
-        // ****************** Generate External Clock for counter on P0 ************************
-        int zero = 0;
-        int one = 1;
-        temporalBit = 1 << cntTrigPort;  // P0.19 is used for the external clock; P0.19 to P2.1
-        CNTclockSpeed = (counterChannelObj[0]->CNTrateSpinBox->value())/refClockSpeed;
-        for(j=0; j < dataSize; j++) {
-          P0data[j] ^= (-zero ^ P0data[j]) & temporalBit; // Set all zero
+                CNTclockSpeed = (counterChannelObj[k]->CNTrateSpinBox->value())/refClockSpeed;
+                for(j=0; j < dataSize; j++) {
+                  P0data[j] ^= (-zero ^ P0data[j]) & temporalBit; // Set all zero
+                }
+                for(j=0; j < dataSize; j+=CNTclockSpeed) {
+                  P0data[j] ^= (-one ^ P0data[j]) & temporalBit;  // Set the clock signal one
+                }
+                // DAQmxCfgSampClkTiming(CNTtaskHandle[k],"/Dev1/PFI9",rate,DAQmx_Val_Rising,DAQmx_Val_FiniteSamps,CNTdataSize[k]);
+                DAQmxCfgSampClkTiming(CNTtaskHandle[k],counterChannelObj[k]->extClockChan,rate,DAQmx_Val_Rising,DAQmx_Val_FiniteSamps,CNTdataSize[k]);
+            }
         }
-        for(j=0; j < dataSize; j+=CNTclockSpeed) {
-          P0data[j] ^= (-one ^ P0data[j]) & temporalBit;  // Set the clock signal one
-        }
-        CNTdata = new uInt32[CNTdataSize];
-        DAQmxCfgSampClkTiming(CNTtaskHandle,"/Dev1/PFI9",rate,DAQmx_Val_Rising,DAQmx_Val_FiniteSamps,CNTdataSize);
     }
 
     // **************************** Write DAQmx Code *******************************
@@ -989,15 +1043,21 @@ void MainWindow::startSingleRun()
 
     if(activeAOchannelNum != 0) { DAQmxStartTask(AOtaskHandle); }
 
-    if(counterChannelObj[0]->channelCheckBox->isChecked()) { DAQmxStartTask(CNTtaskHandle); }
+    for(i=0; i<counterChannelNum; i++) {
+        if(counterChannelObj[i]->channelCheckBox->isChecked()) { DAQmxStartTask(CNTtaskHandle[i]); }
+    }
 
     if(activeAIchannelNum != 0) { DAQmxStartTask(AItaskHandle); }
 
     // ******************************************************************************
 
     // ********************** Write DAQmx Code (Counter, AI) ***************************
-    if(counterChannelObj[0]->channelCheckBox->isChecked()) {
-        DAQmxReadCounterU32(CNTtaskHandle,CNTdataSize,timeout,CNTdata,CNTdataSize,&CNTread,NULL);
+    if(activeCNTchannelNum != 0) {
+        for(i=0; i<counterChannelNum; i++) {
+            if(counterChannelObj[i]->channelCheckBox->isChecked()) {
+                DAQmxReadCounterU32(CNTtaskHandle[i],CNTdataSize[i],timeout,CNTdata[i],CNTdataSize[i],&CNTread[i],NULL);
+            }
+        }
     }
     if(activeAIchannelNum != 0)
     { DAQmxReadAnalogF64(AItaskHandle,numSampsPerChan,timeout,DAQmx_Val_GroupByChannel,AIdata,arraySizeInSamps,NULL,NULL); }
@@ -1007,12 +1067,21 @@ void MainWindow::startSingleRun()
     /********************** Save measured data for frequency scan *********************/
     if (measureControlComboBox->currentIndex() == 1)  {  // Frequency Scan
         detuneArray[freqScanCount] = freqScanRef+freqMultiplier*freqScanStep;
-        if ((freqScanDetectComboBox->currentIndex() ==0) & (counterChannelObj[0]->channelCheckBox->isChecked())) { //  Detect by P2.0 & Counter activated
-            int ch = DOBoxPortNum + counterChannelObj[0]->CNTrefTimeComboBox->currentIndex();
-            int tStart = counterChannelObj[0]->CNTstartComboBox->currentIndex();
-            int tEnd = counterChannelObj[0]->CNTendComboBox->currentIndex();
-            int CNTrate = counterChannelObj[0]->CNTrateSpinBox->value();
-            countDataArray[freqScanCount] = CNTdata[(pulseChannelObj[ch]->P0timeLine[tEnd]->text().toInt())/CNTrate] - CNTdata[(pulseChannelObj[ch]->P0timeLine[tStart]->text().toInt())/CNTrate];
+        if (freqScanDetectComboBox->currentIndex() ==0) //  Detect by P1 or P2
+        {
+            int ch, tStart, tEnd, CNTrate;
+            for(i=0; i<counterChannelNum; i++)
+            {
+                if(counterChannelObj[i]->channelCheckBox->isChecked())
+                {
+                    ch = DOBoxPortNum + counterChannelObj[i]->CNTrefTimeComboBox->currentIndex();
+                    tStart = counterChannelObj[i]->CNTstartComboBox->currentIndex();
+                    tEnd = counterChannelObj[i]->CNTendComboBox->currentIndex();
+                    CNTrate = counterChannelObj[i]->CNTrateSpinBox->value();
+                    countDataArray[i][freqScanCount] = CNTdata[i][(pulseChannelObj[ch]->P0timeLine[tEnd]->text().toInt())/CNTrate]
+                                                        - CNTdata[i][(pulseChannelObj[ch]->P0timeLine[tStart]->text().toInt())/CNTrate];
+                }
+            }
         }
         if (freqScanDetectComboBox->currentIndex() == 1) { // Detect by AI0
             // AItimeIndex = analogInChannelObj[i]->AIrateSpinBox->value()/refClockSpeed;
@@ -1054,13 +1123,14 @@ void MainWindow::startSingleRun()
                              xHighLim = (analogOutChannelObj[j]->AOtimeLine[l]->text().toDouble())/1000; // high limit of x axis [ms]
                          }
                      }
-                     plotDockObj[i]->plotDockUpdate(xLowLim, xHighLim, CNTdataSize, counterChannelObj[m-1-analogInChannelNum]->CNTrateSpinBox->value(),CNTdata);
+                     plotDockObj[i]->plotDockUpdate(xLowLim, xHighLim, CNTdataSize[m-1-analogInChannelNum], counterChannelObj[m-1-analogInChannelNum]->CNTrateSpinBox->value(),CNTdata[m-1-analogInChannelNum]);
                  }
              }
 
              else {  // plot Frequency Scan
-                 // plotDockObj[i]->plotFreqScan(freqScanInit, freqScanCount+1, freqScanNum, freqScanStep, countDataArray);
-                 plotDockObj[i]->plotFreqScan(freqScanInit, freqScanCount+1, freqScanNum, freqScanStep, detuneArray, countDataArray);
+                 int q = m - analogInChannelNum - counterChannelNum - 1; // CNTchannelObj index
+                 if(q == 0) { plotDockObj[i]->plotFreqScan(freqScanInit, freqScanCount+1, freqScanNum, freqScanStep, detuneArray, countDataArray[q]); }
+                 else if(q == 1) { plotDockObj[i]->plotFreqScan(freqScanInit, freqScanCount+1, freqScanNum, freqScanStep, detuneArray, countDataArray[q]); }
              }
         }
     }
@@ -1120,10 +1190,12 @@ void MainWindow::startSingleRun()
             fprintf(fp, "%s\n\n", noteCString);
         }
 
-        if(counterChannelObj[0]->channelCheckBox->isChecked()) {
-            // int a = counterChannelObj[i]->CNTdata[j];
-            for(j=1; j<CNTdataSize; j++) {
-                fprintf(fp, "%d\t%d\n", j * (counterChannelObj[0]->CNTrateSpinBox->value()), (unsigned int)(CNTdata[j]-CNTdata[j-1]));
+        for(i=0; i<counterChannelNum; i++) {
+            if(counterChannelObj[i]->channelCheckBox->isChecked()) {
+                // int a = counterChannelObj[i]->CNTdata[j];
+                for(j=1; j<CNTdataSize[i]; j++) {
+                    fprintf(fp, "%d\t%d\n", j * (counterChannelObj[i]->CNTrateSpinBox->value()), (unsigned int)(CNTdata[i][j]-CNTdata[i][j-1]));
+                }
             }
         }
         fclose(fp);
@@ -1151,10 +1223,12 @@ void MainWindow::startSingleRun()
         DAQmxClearTask(AOtaskHandle);
         delete[] AOdata;
     }
-    if(counterChannelObj[0]->channelCheckBox->isChecked()) {
-        DAQmxStopTask(CNTtaskHandle);
-        DAQmxClearTask(CNTtaskHandle);
-        delete[] CNTdata;
+    for(k=0; k<counterChannelNum; k++) {
+        if(counterChannelObj[k]->channelCheckBox->isChecked()) {
+            DAQmxStopTask(CNTtaskHandle[k]);
+            DAQmxClearTask(CNTtaskHandle[k]);
+            delete[] CNTdata[k];
+        }
     }
 
     pulseChannelObj[8]->P0idleComboBoxChanged(); // Set the P0 channel to the idle state
@@ -1437,55 +1511,124 @@ void MainWindow::mousePressEvent ( QMouseEvent * event )
     else if(event->button() == Qt::MidButton)
         emit midClickAction();
 }
-
-
-void MainWindow::print()
-{
-#ifndef QT_NO_PRINTDIALOG
-    QTextDocument *document = textEdit->document();
-    QPrinter printer;
-
-    QPrintDialog dlg(&printer, this);
-    if (dlg.exec() != QDialog::Accepted) {
-        return;
-    }
-
-    document->print(&printer);
-    statusBar()->showMessage(tr("Ready"), 2000);
-#endif
-}
 */
+
+void MainWindow::open()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Choose a file name"), ".",tr("Text Documents (*.txt)"));
+    if (!fileName.isEmpty()) { loadFile(fileName); }
+}
 
 void MainWindow::save()
 {
-    QString fileName = QFileDialog::getSaveFileName(this,
-                        tr("Choose a file name"), ".",
-                        tr("HTML (*.html *.htm)"));
-    if (fileName.isEmpty())
+    if (curFile.isEmpty()) { saveAs(); }
+    else { saveFile(curFile); }
+}
+
+void MainWindow::saveAs()
+{
+    QString fileName = QFileDialog::getSaveFileName(this);
+    if (fileName.isEmpty()) { return; }
+    saveFile(fileName);
+}
+
+void MainWindow::openRecentFile()
+{
+    QAction *action = qobject_cast<QAction *>(sender());
+    if (action) { loadFile(action->data().toString()); }
+}
+
+void MainWindow::loadFile(const QString &fileName)
+{
+    QFile file(fileName);
+    if (!file.open(QFile::ReadOnly | QFile::Text)) {
+        QMessageBox::warning(this, tr("Recent Files"), tr("Cannot read file %1:\n%2.").arg(fileName).arg(file.errorString()));
         return;
+    }
+
+    // Write parameters
+    QTextStream in(&file);
+
+    setCurrentFile(fileName);
+    // statusBar()->showMessage(tr("file loaded"), 2000);
+}
+
+void MainWindow::saveFile(const QString &fileName)
+{
+    // QString fileName = QFileDialog::getSaveFileName(this, tr("Choose a file name"), ".",tr("txt"));
+    // if (fileName.isEmpty()) { return; }
+
     QFile file(fileName);
     if (!file.open(QFile::WriteOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("Dock Widgets"),
+        QMessageBox::warning(this, tr("NPQO_DAQ"),
                              tr("Cannot write file %1:\n%2.")
                              .arg(fileName)
                              .arg(file.errorString()));
         return;
     }
 
+    /*
     QTextStream out(&file);
     QApplication::setOverrideCursor(Qt::WaitCursor);
     out << textEdit->toHtml();
     QApplication::restoreOverrideCursor();
+    */
 
+    setCurrentFile(fileName);
     statusBar()->showMessage(tr("Saved '%1'").arg(fileName), 2000);
 }
 
-void MainWindow::undo()
+void MainWindow::setCurrentFile(const QString &fileName)
 {
-    QTextDocument *document = textEdit->document();
-    document->undo();
+    curFile = fileName;
+    setWindowFilePath(curFile);
+
+    QSettings settings;
+    QStringList files = settings.value("recentFileList").toStringList();
+    files.removeAll(fileName);
+    files.prepend(fileName);
+    while (files.size() > MaxRecentFiles) {
+        files.removeLast();
+    }
+
+    settings.setValue("recentFileList", files);
+
+    int i = 0;
+    foreach (QWidget *widget, QApplication::topLevelWidgets()) {
+        MainWindow *mainWin = qobject_cast<MainWindow *>(widget);
+
+        if (mainWin) {
+            mainWin->updateRecentFileActions();
+        }
+    }
 }
 
+void MainWindow::updateRecentFileActions()
+{
+    QSettings settings;
+    QStringList files = settings.value("recentFileList").toStringList();
+
+    int numRecentFiles = qMin(files.size(), (int)MaxRecentFiles);
+    statusBar()->showMessage(tr("numRecentFiles '%1'").arg(numRecentFiles), 2000);
+
+    for (int i = 0; i < numRecentFiles; ++i) {
+        QString text = tr("&%1 %2").arg(i + 1).arg(strippedName(files[i]));
+        recentFileActs[i]->setText(text);
+        recentFileActs[i]->setData(files[i]);
+        recentFileActs[i]->setVisible(true);
+    }
+    for (int j = numRecentFiles; j < MaxRecentFiles; ++j)
+        recentFileActs[j]->setVisible(false);
+
+    separatorAct->setVisible(numRecentFiles > 0);
+}
+
+QString MainWindow::strippedName(const QString &fullFileName)
+{
+    return QFileInfo(fullFileName).fileName();
+}
+
+/*
 void MainWindow::insertCustomer(const QString &customer)
 {
     if (customer.isEmpty())
@@ -1526,6 +1669,7 @@ void MainWindow::addParagraph(const QString &paragraph)
   cursor.endEditBlock();
 
 }
+*/
 
 void MainWindow::about()
 {
@@ -1538,16 +1682,26 @@ void MainWindow::about()
 
 void MainWindow::createActions()
 {
+    openAct = new QAction(tr("Open..."), this);
+    openAct->setShortcuts(QKeySequence::Open);
+    openAct->setStatusTip(tr("Open an existing file"));
+    connect(openAct, SIGNAL(triggered()), this, SLOT(open()));
 
     saveAct = new QAction(QIcon(":/images/save.png"), tr("&Save..."), this);
     saveAct->setShortcuts(QKeySequence::Save);
-    saveAct->setStatusTip(tr("Save the current form letter"));
+    saveAct->setStatusTip(tr("Save the current settings"));
     connect(saveAct, SIGNAL(triggered()), this, SLOT(save()));
 
-    undoAct = new QAction(QIcon(":/images/undo.png"), tr("&Undo"), this);
-    undoAct->setShortcuts(QKeySequence::Undo);
-    undoAct->setStatusTip(tr("Undo the last editing action"));
-    connect(undoAct, SIGNAL(triggered()), this, SLOT(undo()));
+    saveAsAct = new QAction(tr("&Save &As..."), this);
+    saveAsAct->setShortcuts(QKeySequence::SaveAs);
+    saveAsAct->setStatusTip(tr("Save the current settings under a new name"));
+    connect(saveAsAct, SIGNAL(triggered()), this, SLOT(saveAs()));
+
+    for (int i = 0; i < MaxRecentFiles; ++i) {
+        recentFileActs[i] = new QAction(this);
+        recentFileActs[i]->setVisible(false);
+        connect(recentFileActs[i], SIGNAL(triggered()), this, SLOT(openRecentFile()));
+    }
 
     quitAct = new QAction(tr("&Quit"), this);
     quitAct->setShortcuts(QKeySequence::Quit);
@@ -1568,17 +1722,23 @@ void MainWindow::createMenus()
 {
     fileMenu = menuBar()->addMenu(tr("&File"));
 //    fileMenu->addAction(newLetterAct);
+    fileMenu->addAction(openAct);
     fileMenu->addAction(saveAct);
+    fileMenu->addAction(saveAsAct);
 //    fileMenu->addAction(printAct);
+    separatorAct = fileMenu->addSeparator();
+    for (int i = 0; i < MaxRecentFiles; i++) {
+        fileMenu->addAction(recentFileActs[i]);
+    }
     fileMenu->addSeparator();
     fileMenu->addAction(quitAct);
-
-    editMenu = menuBar()->addMenu(tr("&Edit"));
-    editMenu->addAction(undoAct);
-
-    viewMenu = menuBar()->addMenu(tr("&View"));
+    updateRecentFileActions();
 
     menuBar()->addSeparator();
+//    editMenu = menuBar()->addMenu(tr("&Edit"));
+//    editMenu->addAction(undoAct);
+
+    viewMenu = menuBar()->addMenu(tr("&View"));
 
     helpMenu = menuBar()->addMenu(tr("&Help"));
     helpMenu->addAction(aboutAct);
@@ -1600,7 +1760,7 @@ void MainWindow::createToolBars()
 
 void MainWindow::createStatusBar()
 {
-    statusBar()->showMessage(tr("Ready"));
+    // statusBar()->showMessage(tr("Ready"));
 }
 
 void MainWindow::createDockWindows()

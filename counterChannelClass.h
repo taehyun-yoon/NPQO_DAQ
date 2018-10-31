@@ -20,11 +20,13 @@ public:
   void createCNTtaskHandle();
   void clearCNTtaskHandle();
   void updateCNTrateSpinBox(int);
+  void CNTrefTimeEnable();
   QSpinBox *CNTrateSpinBox;
   QComboBox *CNTrefTimeComboBox;
   QComboBox *CNTstartComboBox;
   QComboBox *CNTendComboBox;
   FILE *writeFile;
+  static bool freqScanFlag;
   bool CNTwriteFlag;
   // double convertedValue;
   int CNTreadRate;

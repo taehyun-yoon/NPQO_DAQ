@@ -5,6 +5,7 @@
 #include <QPushButton>
 #include <QKeyEvent>
 #include <QMap>
+#include <QList>
 #include "analogInChannelClass.h"
 #include "pulseChannelClass.h"
 #include "analogOutChannelClass.h"
@@ -13,7 +14,13 @@
 #include "plotDockClass.h"
 #include "qcustomplot.h"
 
+QT_BEGIN_NAMESPACE
+class QAction;
+class QMenu;
+QT_END_NAMESPACE
+
 //#define DAQmxErrChk(functionCall) { if( DAQmxFailed(error=(functionCall)) ) { goto Error; } }
+
 
 class MainWindow : public QMainWindow
 {
@@ -25,12 +32,15 @@ public:
 
 private slots:
 //  void newLetter();
+  void open();
   void save();
+  void saveAs();
+  void openRecentFile();
 //  void print();
-  void undo();
+//  void undo();
   void about();
-  void insertCustomer(const QString &customer);
-  void addParagraph(const QString &paragraph);
+//  void insertCustomer(const QString &customer);
+//  void addParagraph(const QString &paragraph);
   void updateReadRate();
 //  void plotUpdate(int);
 //  void writeControlCheckBoxClicked();
@@ -54,6 +64,11 @@ private:
   void createNoteGroupBox();
   void createActions();
   void createMenus();
+  void loadFile(const QString &fileName);
+  void saveFile(const QString &fileName);
+  void setCurrentFile(const QString &fileName);
+  void updateRecentFileActions();
+
   void createToolBars();
   void createStatusBar();
   void createDockWindows();
@@ -82,13 +97,15 @@ private:
   int AItimeIndex;
   float64 *AIdata;
   // double temAIdata;
-  uInt32 *CNTdata;
-  int32 CNTread;
-  int CNTdataSize;
+  uInt32 **CNTdata;
+  int32 CNTread[counterChannelNum];
+  int CNTdataSize[counterChannelNum];
+  int CNTdataSizeMax;
   int CNTclockSpeed;
   int lastTime;
   int activeAOchannelNum;
   int activeAIchannelNum;
+  int activeCNTchannelNum;
   int dataSize;
   double xLowLim;
   double xHighLim;
@@ -111,7 +128,7 @@ private:
   int freqScanDetuneInt;
   int freqScanCount;
   float *detuneArray;
-  int *countDataArray;
+  int **countDataArray;
   float *AIDataArray;
   int bleachRepeatNum;
   int bleachRepeatCount;
@@ -133,7 +150,7 @@ private:
   TaskHandle  P0taskHandle;
   TaskHandle  AItaskHandle;
   TaskHandle  AOtaskHandle;
-  TaskHandle  CNTtaskHandle;
+  TaskHandle  CNTtaskHandle[counterChannelNum];
   float64 timeout;
 
   QWidget *channelScrollWidget;
@@ -197,17 +214,23 @@ private:
   // QSignalMapper *signalMapper[plotDockNum];
   // QTimer *delayControlTimer;
 
+  QString strippedName(const QString &fullFileName);
+  QString curFile;
   QMenu *fileMenu;
-  QMenu *editMenu;
+  QMenu *recentFilesMenu;
+//  QMenu *editMenu;
   QMenu *viewMenu;
   QMenu *helpMenu;
-  QToolBar *fileToolBar;
-  QToolBar *editToolBar;
+//  QToolBar *fileToolBar;
+//  QToolBar *editToolBar;
+  QAction *openAct;
   QAction *saveAct;
-  QAction *undoAct;
+  QAction *saveAsAct;
+//  QAction *undoAct;
   QAction *aboutAct;
   QAction *aboutQtAct;
   QAction *quitAct;
+  QAction *separatorAct;
 
   QWidget *window;
   //QGridLayout *windowLayout;
@@ -224,6 +247,9 @@ private:
   SerialChannelClass *serialChannelObj[serialChannelNum];
   PulseChannelClass *pulseChannelObj[DOBoxPortNum+pulseChannelNum];
   AnalogOutChannelClass *analogOutChannelObj[analogOutChannelNum];
+
+  enum { MaxRecentFiles = 5 };
+  QAction *recentFileActs[MaxRecentFiles];
 
 };
 

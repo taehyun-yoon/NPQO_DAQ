@@ -108,7 +108,8 @@ void PulseChannelClass::P0idleComboBoxChanged()
       }
     }
   }
-  P0dataSingle ^= (-0 ^ P0dataSingle) & (0x0001 << cntTrigPort); // Set the counter trigger to 0.19
+  P0dataSingle ^= (-0 ^ P0dataSingle) & (0x0001 << cntTrigPort1); // Set the counter trigger to 0.19
+  P0dataSingle ^= (-0 ^ P0dataSingle) & (0x0001 << cntTrigPort2); // Set the counter trigger to 0.20
   P0dataSingle ^= (-P0idleComboBox->currentIndex() ^ P0dataSingle) & (0x0001 << P0lineNum);
 
   /************************ Run single value update ***********************/

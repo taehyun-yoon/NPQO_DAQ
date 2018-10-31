@@ -13,9 +13,9 @@
 
 
 #define analogInChannelNum 3 // number of AI channels
-#define counterChannelNum 1 // Number of CNT channels
+#define counterChannelNum 2 // Number of CNT channels
 #define serialChannelNum 5 // Number of SR channels
-#define pulseChannelNum 13 // number of P0 channels
+#define pulseChannelNum 12 // number of P0 channels
 #define analogOutChannelNum 4 // Number of AO channels
 #define DOBoxPortNum 6 // Starting port number P0.X (P0.0 - P0.5), P0.6: 3.3V DO2, P0.7: 3.3V DO3
 #define pulseNum 6 // Number of pulses per each P0 channel
@@ -24,9 +24,12 @@
 #define clockSingleStep 1 // Size of single step of the clock [us]
 #define maxVoltage 10.0 // Maximum voltage of analog output [V]
 #define minVoltage -10.0 // Minimum voltage of analog output [V]
-#define cntTrigPort 19 // P0.19 used for triggering Counter
-//#define timeLimit 5000000 // Time Limit of one cycle [us]
-#define timeLimit 5000000000 // Time Limit of one cycle [us] : 5000s // modification for Jeremy's measurement
+#define cntTrigPort1 19 // P0.19 used for triggering Counter
+#define cntTrigPort2 18 // P0.18 used for triggering Counter
+#define timeLimit 5000000 // Time Limit of one cycle [us]
+//#define timeLimit 5000000000 // Time Limit of one cycle [us] : 5000s // modification for Jeremy's measurement
+#define zero 0
+#define one 1
 
 QT_BEGIN_NAMESPACE
 class QAction;

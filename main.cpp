@@ -8,6 +8,7 @@ int ChannelClass::serialChannelCount = 0;
 int ChannelClass::pulseChannelCount = DOBoxPortNum;
 int ChannelClass::analogOutChannelCount = 0;
 int ChannelClass::clockSpeed = 10;
+bool CounterChannelClass::freqScanFlag = false;
 uInt32 PulseChannelClass::P0dataSingle = 0x00000000;
 // TaskHandle PulseChannelClass::P0taskHandleSingle = 0;
 // uInt64 PulseChannelClass::samplesPerChan = 1;
@@ -17,7 +18,7 @@ int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
     Q_INIT_RESOURCE(NPQO_DAQ);
-    MainWindow mainWin;
-    mainWin.show();
+    MainWindow *mainWin = new MainWindow;
+    mainWin->show();
     return app.exec();
 }

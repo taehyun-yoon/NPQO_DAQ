@@ -18,17 +18,18 @@ ChannelClass::ChannelClass(QString str1)
  
     analogInChannelCount++;
   }
-  else if (str1 == "P2")
+  else if (str1 == "P")
   {
+    str1.append(QString::number(counterChannelCount+1));
     str1.append(".");
-    str1.append(QString::number(counterChannelCount));
+    str1.append(QString::number(3*(1-counterChannelCount))); // P1.3, P2.0
     // Making the device and channel name
     char channelNum[1];
-    sprintf(channelNum,"%d",counterChannelCount);
+    sprintf(channelNum,"%d",1-counterChannelCount);
     strcpy(chan,"Dev1/ctr");
-    strcat(chan,channelNum);
-    if(counterChannelCount == 0) { strcpy(extClockChan,"Dev1/PFI9"); }
-    else if (counterChannelCount == 1){ strcpy(extClockChan,"Dev1/PFI17"); }
+    strcat(chan,channelNum);  // ctr1/P1,    ctr0/P2
+    if(counterChannelCount == 0) { strcpy(extClockChan,"/Dev1/PFI4"); } // PFI4/P1.4
+    else if (counterChannelCount == 1){ strcpy(extClockChan,"/Dev1/PFI9"); } // PFI9/P2.1
     str2 = "Counter";
 
     counterChannelCount++;
