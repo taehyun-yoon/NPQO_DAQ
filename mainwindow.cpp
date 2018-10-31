@@ -134,6 +134,9 @@ void MainWindow::createFreqScanGroupBox() {
   freqScanMasterComboBox = new QComboBox;
   freqScanMasterComboBox->addItem("F=4 - F'=4co5");
   freqScanMasterComboBox->addItem("F=4 - F'=5");
+  freqScanMasterComboBox->addItem("F=4 - F'=3co5");
+  freqScanMasterComboBox->addItem("F=4 - F'=3co4");
+  freqScanMasterComboBox->addItem("F=4 - F'=3");
   freqScanMasterComboBox->addItem("F=3 - F'=2co3");
   freqScanMasterComboBox->addItem("F=3 - F'=3");
   freqScanMasterComboBox->setEnabled(false);
@@ -545,8 +548,11 @@ void MainWindow::startButtonPressed()
                 if (freqScanTypeComboBox->currentIndex() == 0) { // Cs Scan
                     if (freqScanMasterComboBox->currentIndex() == 0) { freqScanMaster = 0; freqScanNDiv1 = 8; freqScanNDiv2 = 64; } // Master F=4 to F'=4co5 (Reference)
                     else if (freqScanMasterComboBox->currentIndex() == 1) { freqScanMaster = -125500000; freqScanNDiv1 = 8; freqScanNDiv2 = 64;  }  // Master F=4 to F'=5
-                    else if (freqScanMasterComboBox->currentIndex() == 2) { freqScanMaster = 125500000+201240000+75605000-9192631770; freqScanNDiv1 = 64; freqScanNDiv2 = 8;  }  // Master F=3 to F'=2co3
-                    else if (freqScanMasterComboBox->currentIndex() == 3) { freqScanMaster = 125500000+201240000-9192631770; freqScanNDiv1 = 64; freqScanNDiv2 = 8;  }  // Master F=3 to F'=3
+                    else if (freqScanMasterComboBox->currentIndex() == 2) { freqScanMaster = 100620000; freqScanNDiv1 = 8; freqScanNDiv2 = 64;  }  // Master F=4 to F'=3co5
+                    else if (freqScanMasterComboBox->currentIndex() == 3) { freqScanMaster = 226120000; freqScanNDiv1 = 8; freqScanNDiv2 = 64;  }  // Master F=4 to F'=3co4
+                    else if (freqScanMasterComboBox->currentIndex() == 4) { freqScanMaster = 326740000; freqScanNDiv1 = 8; freqScanNDiv2 = 64;  }  // Master F=4 to F'=3
+                    else if (freqScanMasterComboBox->currentIndex() == 5) { freqScanMaster = 125500000+201240000+75605000-9192631770; freqScanNDiv1 = 64; freqScanNDiv2 = 8;  }  // Master F=3 to F'=2co3
+                    else if (freqScanMasterComboBox->currentIndex() == 6) { freqScanMaster = 125500000+201240000-9192631770; freqScanNDiv1 = 64; freqScanNDiv2 = 8;  }  // Master F=3 to F'=3
 
                     switch(freqScanAOMComboBox->currentIndex()) {
                         case 0:
@@ -595,7 +601,7 @@ void MainWindow::startButtonPressed()
                     break;
                 case 2:
                     freqScanDetune = fabs(0.000001*freqScanDetune); // P0.4 (Vescent)
-                    serialChannelObj[4]->SRsetLine[freqScanTimeComboBox->currentIndex()]->setText(QString::number(freqScanDetune,'f',6)); // P0.4 when P0.2, P0.3 are empty
+                    serialChannelObj[4]->SRsetLine[freqScanTimeComboBox->currentIndex()]->setText("IntFreq " + (QString::number(freqScanDetune,'f',6)) + "\\r"); // P0.4 when P0.2, P0.3 are empty
                     break;
                 }
 
@@ -1086,7 +1092,8 @@ void MainWindow::startSingleRun()
         if (freqScanDetectComboBox->currentIndex() == 1) { // Detect by AI0
             // AItimeIndex = analogInChannelObj[i]->AIrateSpinBox->value()/refClockSpeed;
             // Average of last five data points, need to be updated
-            AIDataArray[freqScanCount] = (AIdata[dataSize-10] + AIdata[dataSize-20] + AIdata[dataSize-30] + AIdata[dataSize-40] + AIdata[dataSize-50])/5;
+            // AIDataArray[freqScanCount] = (AIdata[dataSize-10] + AIdata[dataSize-20] + AIdata[dataSize-30] + AIdata[dataSize-40] + AIdata[dataSize-50])/5;
+            AIDataArray[freqScanCount] = (AIdata[101020] + AIdata[101060] + AIdata[101100] + AIdata[101140] + AIdata[101180])/5;
         }
     }
     /*******************************************************************************/
@@ -1567,8 +1574,9 @@ void MainWindow::saveFile(const QString &fileName)
         return;
     }
 
-    /*
     QTextStream out(&file);
+    out << "clock speed";
+    /*
     QApplication::setOverrideCursor(Qt::WaitCursor);
     out << textEdit->toHtml();
     QApplication::restoreOverrideCursor();

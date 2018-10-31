@@ -49,7 +49,7 @@ class QTimer;
 class QWidget;
 QT_END_NAMESPACE
 
-class ChannelClass : public QObject
+class ChannelClass : public QObject // abstract class
 {
   Q_OBJECT
 
@@ -65,6 +65,25 @@ protected:
 
 
 public slots:
+  /*
+  virtual void analogInCheckBoxClicked() = 0;
+  virtual void counterCheckBoxClicked() = 0;
+  virtual void pulseCheckBoxClicked() = 0;
+  virtual void serialCheckBoxClicked() = 0;
+  virtual void analogOutCheckBoxClicked() = 0;
+  virtual void P0idleComboBoxChanged() = 0;
+  virtual void P0stateComboBoxChanged(int) = 0;
+  virtual void P0timeLineChanged(int) = 0;
+  virtual void SRidleLineChanged() = 0;
+  virtual void SRsetLineChanged(int) = 0;
+  virtual void SRtimeLineChanged(int) = 0;
+  virtual void AOidleLineChanged() = 0;
+  virtual void AOsetLineChanged(int) = 0;
+  virtual void AOtimeLineChanged(int) = 0;
+  virtual void AIrateSpinBoxChanged() = 0;
+  virtual void CNTrateSpinBoxChanged() = 0;
+  */
+
   virtual void analogInCheckBoxClicked() {}
   virtual void counterCheckBoxClicked() {}
   virtual void pulseCheckBoxClicked() {}
